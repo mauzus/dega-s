@@ -149,8 +149,10 @@ char *AppName(unsigned int MastVer)
     default: coreName = "unknown";
   }
 
-  if (MastVersion&0xf) sprintf (Name,APP_TITLE " v%x.%.3x, %s core",MastVersion>>12,MastVersion&0xfff,coreName);
-  else                 sprintf (Name,APP_TITLE " v%x.%.2x, %s core",MastVersion>>12,(MastVersion>>4)&0xff,coreName);
+//  if (MastVersion&0xf) sprintf (Name,APP_TITLE " v%x.%.3x, %s core",MastVersion>>12,MastVersion&0xfff,coreName);
+//  else                 sprintf (Name,APP_TITLE " v%x.%.2x, %s core",MastVersion>>12,(MastVersion>>4)&0xff,coreName);
+  if (MastVersion&0xf) sprintf (Name,APP_TITLE " v%x.%.3x",MastVersion>>12,MastVersion&0xfff);
+  else                 sprintf (Name,APP_TITLE " v%x.%.2x",MastVersion>>12,(MastVersion>>4)&0xff);
   return Name;
 }
 

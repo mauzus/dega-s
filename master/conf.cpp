@@ -1,7 +1,7 @@
 // Config file module
 #include "app.h"
 
-static char *Config="dega.ini";
+static char *Config="dega-s.ini";
 
 static char *LabelCheck(char *s,char *Label)
 {
@@ -65,6 +65,19 @@ int ConfLoad()
       value = LabelCheck(Line, buf);
       if (value!=NULL) KeyMappings[i] = strtol(value,NULL,0);
     }
+
+    //Ram Watch Settings
+    VAR(AutoRWLoad);
+    VAR(RWSaveWindowPos);
+    VAR(ramw_x);
+    VAR(ramw_y);
+
+    STR(rw_recent_files[0]);
+    STR(rw_recent_files[1]);
+    STR(rw_recent_files[2]);
+    STR(rw_recent_files[3]);
+    STR(rw_recent_files[4]);
+
 #undef STR
 #undef VAR
   }
@@ -118,7 +131,20 @@ int ConfSave()
     {
       fprintf( h, "Key%dMapping %d\n", i, KeyMappings[i]);
     }
-    
+
+    //Ram Watch Settings
+    fprintf (h, "\n// RAM Watch\n");
+    VAR(AutoRWLoad);
+    VAR(RWSaveWindowPos);
+    VAR(ramw_x);
+    VAR(ramw_y);
+
+    STR(rw_recent_files[0]);
+    STR(rw_recent_files[1]);
+    STR(rw_recent_files[2]);
+    STR(rw_recent_files[3]);
+    STR(rw_recent_files[4]);
+
 #undef STR
 #undef VAR
 
