@@ -84,7 +84,7 @@ else ifeq ($(P),win)
 	DOZE_FIXUP =
 	ENCODER_OBJ = tools/wdegavi.o tools/degavirc.o
 	ENCODER_LIBS = libvfw/libvfw.a
-	ENCODER_LDFLAGS = -lcomdlg32 -lvfw32 -lmsacm32 -lm -Wl,--subsystem,windows
+	ENCODER_LDFLAGS = -lcomdlg32 -lvfw32 -lmsacm32 -lole32 -lm -Wl,--subsystem,windows
 	EXTRA_LDFLAGS = -specs=$(shell pwd)/specs -mno-cygwin -static
 	GUI_LDFLAGS = -Wl,--subsystem,windows
 	SPECS = specs
@@ -188,8 +188,10 @@ $(PLATPYOBJCXX): %.o: %.cpp
 	$(CC) -c -o $@ $< -DEMBEDDED $(PYTHON_CFLAGS)
 
 clean:
-	rm -f $(Z80OBJ) $(DAMOBJ) $(MASTOBJ) $(PLATOBJ) $(PYOBJ) $(PYEMBOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) tools/degavi.o tools/mmvconv.o doze/dozea.asm* doze/dam doze/dam.exe dega dega.exe degavi degavi.exe mmvconv mmvconv.exe pydega.so pydega.dll pydega.pyd specs
+	rm -f $(Z80OBJ) $(DAMOBJ) $(MASTOBJ) $(PLATOBJ) $(PYOBJ) $(PYEMBOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) tools/avioutput.o tools/degavi.o tools/degavirc.o tools/mmvconv.o tools/wdegavi.o doze/dozea.asm* doze/dam doze/dam.exe dega dega.exe degavi degavi.exe mmvconv mmvconv.exe pydega.so pydega.dll pydega.pyd specs
 	make -Czlib clean
+	make -Clibmencoder clean
+	make -Clibvfw clean
 
 distclean: clean
 	rm -f *~ */*~

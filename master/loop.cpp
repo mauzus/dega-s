@@ -166,6 +166,7 @@ static int MediaInit(int Level)
     CHK(ID_INPUT_KEYBOARD,UseJoystick==0)
     CHK(ID_INPUT_JOYSTICK,UseJoystick!=0)
     CHK(ID_STATE_AUTOLOADSAVE,AutoLoadSave!=0)
+    CHK(ID_STATE_SRAM,MastEx&MX_SRAM)
     CHK(ID_SOUND_ENHANCEPSG,DpsgEnhance)
     CHK(ID_SOUND_QUALITY_OFF,DSoundSamRate==0)
     CHK(ID_SOUND_QUALITY_12000HZ,DSoundSamRate==12000)
@@ -299,6 +300,26 @@ struct CustomKeyMap mymap[] = {
  { KMAP_P2_HOLD_RIGHT, ID_INPUT_P2_HOLD_RIGHT },
  { KMAP_BUTTONSTATE,  ID_INPUT_BUTTONS },
  { KMAP_FRAMECOUNTER, ID_VIDEO_FRAMECOUNTER },
+ { KMAP_SAVE_TO_SLOT(0), ID_STATE_SAVE_SLOT(0) },
+ { KMAP_SAVE_TO_SLOT(1), ID_STATE_SAVE_SLOT(1) },
+ { KMAP_SAVE_TO_SLOT(2), ID_STATE_SAVE_SLOT(2) },
+ { KMAP_SAVE_TO_SLOT(3), ID_STATE_SAVE_SLOT(3) },
+ { KMAP_SAVE_TO_SLOT(4), ID_STATE_SAVE_SLOT(4) },
+ { KMAP_SAVE_TO_SLOT(5), ID_STATE_SAVE_SLOT(5) },
+ { KMAP_SAVE_TO_SLOT(6), ID_STATE_SAVE_SLOT(6) },
+ { KMAP_SAVE_TO_SLOT(7), ID_STATE_SAVE_SLOT(7) },
+ { KMAP_SAVE_TO_SLOT(8), ID_STATE_SAVE_SLOT(8) },
+ { KMAP_SAVE_TO_SLOT(9), ID_STATE_SAVE_SLOT(9) },
+ { KMAP_LOAD_FROM_SLOT(0), ID_STATE_LOAD_SLOT(0) },
+ { KMAP_LOAD_FROM_SLOT(1), ID_STATE_LOAD_SLOT(1) },
+ { KMAP_LOAD_FROM_SLOT(2), ID_STATE_LOAD_SLOT(2) },
+ { KMAP_LOAD_FROM_SLOT(3), ID_STATE_LOAD_SLOT(3) },
+ { KMAP_LOAD_FROM_SLOT(4), ID_STATE_LOAD_SLOT(4) },
+ { KMAP_LOAD_FROM_SLOT(5), ID_STATE_LOAD_SLOT(5) },
+ { KMAP_LOAD_FROM_SLOT(6), ID_STATE_LOAD_SLOT(6) },
+ { KMAP_LOAD_FROM_SLOT(7), ID_STATE_LOAD_SLOT(7) },
+ { KMAP_LOAD_FROM_SLOT(8), ID_STATE_LOAD_SLOT(8) },
+ { KMAP_LOAD_FROM_SLOT(9), ID_STATE_LOAD_SLOT(9) },
  { 0, 0 }
 };
 
@@ -343,13 +364,14 @@ int LoopDo()
       if (Msg.wParam==ID_SETUP_ONEFRAME)
       {
         RunText("One Frame Step",2*60);
-	LoopPause=1;
+        LoopPause=1;
         // RunFrame(1,NULL);
       }
       
       if (Msg.wParam==ID_INPUT_KEYBOARD) UseJoystick=0;
       if (Msg.wParam==ID_INPUT_JOYSTICK) UseJoystick=1;
       if (Msg.wParam==ID_STATE_AUTOLOADSAVE) AutoLoadSave=!AutoLoadSave;
+      if (Msg.wParam==ID_STATE_SRAM) MastEx^=MX_SRAM;
       if (Msg.wParam==ID_SOUND_ENHANCEPSG) DpsgEnhance=!DpsgEnhance;
       if (Msg.wParam==ID_SOUND_QUALITY_OFF) DSoundSamRate=0;
       if (Msg.wParam==ID_SOUND_QUALITY_12000HZ) DSoundSamRate=12000;
@@ -368,7 +390,7 @@ int LoopDo()
         char msg[20];
         snprintf(msg, sizeof(msg), "Quick Load %d", SaveSlot);
         RunText(msg, 2*60);
-        StateAutoState(0);
+        StateAutoState(0, SaveSlot);
         Update_RAM_Search();
         MastScreenUpdate();
         DispDraw();
@@ -378,7 +400,26 @@ int LoopDo()
         char msg[20];
         snprintf(msg, sizeof(msg), "Quick Save %d", SaveSlot);
         RunText(msg, 2*60);
-        StateAutoState(1);
+        StateAutoState(1, SaveSlot);
+      }
+      if (Msg.wParam>=ID_STATE_LOAD_SLOT(0) && Msg.wParam<=ID_STATE_LOAD_SLOT(9))
+      {
+        int Slot = Msg.wParam-ID_STATE_LOAD_SLOT_START;
+        char msg[20];
+        snprintf(msg, sizeof(msg), "Quick Load %d", Slot);
+        RunText(msg, 2*60);
+        StateAutoState(0, Slot);
+        Update_RAM_Search();
+        MastScreenUpdate();
+        DispDraw();
+      }
+      if (Msg.wParam>=ID_STATE_SAVE_SLOT(0) && Msg.wParam<=ID_STATE_SAVE_SLOT(9))
+      {
+        int Slot = Msg.wParam-ID_STATE_SAVE_SLOT_START;
+        char msg[20];
+        snprintf(msg, sizeof(msg), "Quick Save %d", Slot);
+        RunText(msg, 2*60);
+        StateAutoState(1, Slot);
       }
       if (Msg.wParam==ID_SETUP_SPEEDUP) { FrameMult++; }
       if (Msg.wParam==ID_SETUP_SLOWDOWN) { FrameMult--; }
@@ -390,7 +431,7 @@ int LoopDo()
         char msg[20];
         SaveSlot=Msg.wParam-ID_STATE_SLOT_START;
         snprintf(msg, sizeof(msg), "Save Slot %d", SaveSlot);
-	RunText(msg, 2*60);
+        RunText(msg, 2*60);
       }
       if (Msg.wParam==ID_SETUP_STATUSHIDE) { SetStatusMode(STATUS_HIDE); }
       if (Msg.wParam==ID_SETUP_STATUSAUTO) { SetStatusMode(STATUS_AUTO); }
@@ -399,7 +440,7 @@ int LoopDo()
       if (Msg.wParam>=ID_SETUP_SCALE_1X && Msg.wParam<=ID_SETUP_SCALE_4X)
       {
         SizeMultiplier=Msg.wParam-ID_SETUP_SCALE_1X+1;
-	FrameSize();
+        FrameSize();
       }
     }
     if (Msg.message==WMU_STATELOAD)   { StateLoad(0); Update_RAM_Search(); MastScreenUpdate(); DispDraw(); }
@@ -455,12 +496,14 @@ MainLoop:
         if (Msg.wParam==ID_VIDEO_READONLY)     { InitLevel=70; break; }
         if (Msg.wParam==ID_STATE_QUICKLOAD)    { InitLevel=60; break; }
         if (Msg.wParam==ID_STATE_QUICKSAVE)    { InitLevel=60; break; }
+        if (Msg.wParam>=ID_STATE_LOAD_SLOT(0) && Msg.wParam<=ID_STATE_LOAD_SLOT(9)) { InitLevel=60; break; }
+        if (Msg.wParam>=ID_STATE_SAVE_SLOT(0) && Msg.wParam<=ID_STATE_SAVE_SLOT(9)) { InitLevel=60; break; }
         if (Msg.wParam==ID_SETUP_SPEEDUP)      { InitLevel=50; break; }
         if (Msg.wParam==ID_SETUP_SLOWDOWN)     { InitLevel=50; break; }
         if (Msg.wParam==ID_SETUP_NORMALSPEED)  { InitLevel=50; break; }
-	if (Msg.wParam==ID_VIDEO_FRAMECOUNTER) { InitLevel=70; break; }
-	if (Msg.wParam==ID_INPUT_BUTTONS)      { InitLevel=70; break; }
-	if (Msg.wParam>=ID_STATE_SLOT(0) && Msg.wParam<=ID_STATE_SLOT(9)) { InitLevel=70; break; }
+        if (Msg.wParam==ID_VIDEO_FRAMECOUNTER) { InitLevel=70; break; }
+        if (Msg.wParam==ID_INPUT_BUTTONS)      { InitLevel=70; break; }
+        if (Msg.wParam>=ID_STATE_SLOT(0) && Msg.wParam<=ID_STATE_SLOT(9)) { InitLevel=70; break; }
         if (Msg.wParam==ID_SETUP_STATUSHIDE)   { InitLevel=70; break; }
         if (Msg.wParam==ID_SETUP_STATUSAUTO)   { InitLevel=70; break; }
         if (Msg.wParam==ID_SETUP_STATUSSHOW)   { InitLevel=70; break; }
