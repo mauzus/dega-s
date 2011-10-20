@@ -8,6 +8,7 @@ CXX=g++
 #CXX=icpc
 NASM=nasm
 WINDRES=windres
+STRIP = strip
 
 CCVER = $(shell $(CC) -v 2>&1)
 
@@ -32,7 +33,7 @@ else ifeq ($(P),win)
 endif
 
 ifndef Z80
-	Z80=doze
+	Z80=z80jb
 endif
 
 ifeq ($(Z80),z80jb)
@@ -93,7 +94,7 @@ else ifeq ($(P),win)
 	PYTHON_LDFLAGS = -L$(PYTHON_PREFIX)/libs -lpython27
 endif
 
-ALLOBJ = dega$(EXEEXT) mmvconv$(EXEEXT) degavi$(EXEEXT)
+ALLOBJ = dega-s$(EXEEXT) mmvconv$(EXEEXT) degavi$(EXEEXT)
 
 ifneq ($(BITS),64)
 ALLOBJ += pydega$(SOEXT)
@@ -142,8 +143,9 @@ all:
 
 endif
 
-dega$(EXEEXT): $(PLATOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) $(Z80OBJ) $(MASTOBJ) $(PYEMBOBJ) $(SPECS)
-	$(CXX) $(EXTRA_LDFLAGS) $(GUI_LDFLAGS) -o dega$(EXEEXT) $(PLATOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) $(Z80OBJ) $(MASTOBJ) $(PYEMBOBJ) $(EXTRA_LIBS)
+dega-s$(EXEEXT): $(PLATOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) $(Z80OBJ) $(MASTOBJ) $(PYEMBOBJ) $(SPECS)
+	$(CXX) $(EXTRA_LDFLAGS) $(GUI_LDFLAGS) -o dega-s$(EXEEXT) $(PLATOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) $(Z80OBJ) $(MASTOBJ) $(PYEMBOBJ) $(EXTRA_LIBS)
+	$(STRIP) dega-s$(EXEEXT)
 
 degavi$(EXEEXT): tools/avioutput.o $(ENCODER_OBJ) $(Z80OBJ) $(MASTOBJ) $(ENCODER_LIBS)
 	$(CC) $(EXTRA_LDFLAGS) -o degavi$(EXEEXT) tools/avioutput.o $(ENCODER_OBJ) $(Z80OBJ) $(MASTOBJ) $(ENCODER_LIBS) $(ENCODER_LDFLAGS)

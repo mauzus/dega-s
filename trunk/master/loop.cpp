@@ -41,6 +41,12 @@ static int MediaInit(int Level)
   if (Level<=15) // Mast library and Python
   {
     Ret=EmuInit(); if (Ret!=0) { AppError("EmuInit Failed",0); return 1; }
+
+    if (AutoRWLoad) {
+      OpenRWRecentFile(0);
+      RamWatchHWnd = CreateDialog(hAppInst, MAKEINTRESOURCE(IDD_RAMWATCH), NULL, (DLGPROC) RamWatchProc);
+    }
+
 //    PythonInit();
 //    EnableMenuItem(hFrameMenu, 7, (PythonLoaded ? MF_ENABLED : MF_GRAYED) | MF_BYPOSITION); // XXX hardcoded (7 = Python)
   }
@@ -364,6 +370,8 @@ int LoopDo()
         RunText(msg, 2*60);
         StateAutoState(0);
         Update_RAM_Search();
+        MastScreenUpdate();
+        DispDraw();
       }
       if (Msg.wParam==ID_STATE_QUICKSAVE)
       {

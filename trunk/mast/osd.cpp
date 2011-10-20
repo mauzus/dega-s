@@ -1,6 +1,6 @@
 #include "mastint.h"
 
-int MdrawOsdOptions = 0;
+int MdrawOsdOptions = 3;
 
 #define CHARWIDTH 7
 #define CHARHEIGHT 7

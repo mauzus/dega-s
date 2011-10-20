@@ -55,6 +55,7 @@ int MsndExit();
 
 // frame.cpp
 int MastFrame();
+void MastScreenUpdate();
 
 // area.cpp
 struct MastArea { void *Data; int Len; };
