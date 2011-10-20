@@ -402,9 +402,9 @@ int LoopDo()
 	FrameSize();
       }
     }
-    if (Msg.message==WMU_STATELOAD)   { StateLoad(0); }
+    if (Msg.message==WMU_STATELOAD)   { StateLoad(0); Update_RAM_Search(); MastScreenUpdate(); DispDraw(); }
     if (Msg.message==WMU_STATESAVE)   { StateSave(0); }
-    if (Msg.message==WMU_STATEIMPORT) { StateLoad(1); }
+    if (Msg.message==WMU_STATEIMPORT) { StateLoad(1); Update_RAM_Search(); MastScreenUpdate(); DispDraw(); }
     if (Msg.message==WMU_STATEEXPORT) { StateSave(1); }
     if (Msg.message==WMU_VGMSTART) { VgmStart(VgmName); }
 
