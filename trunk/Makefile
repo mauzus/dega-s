@@ -77,10 +77,10 @@ else ifeq ($(P),win)
 	NASM_FORMAT = win32
 	EXEEXT = .exe
 	SOEXT = .pyd
-	PLATOBJ = master/app.o master/conf.o master/dinp.o master/disp.o master/dsound.o master/emu.o master/frame.o master/input.o master/load.o master/loop.o master/main.o master/misc.o master/python.o master/render.o master/run.o master/shot.o master/state.o master/video.o master/zipfn.o master/keymap.o zlib/libz.a master/ramwatch.o master/ramsearch.o 
+	PLATOBJ = master/app.o master/conf.o master/dinp.o master/disp.o master/dsound.o master/emu.o master/frame.o master/input.o master/load.o master/loop.o master/main.o master/misc.o master/python.o master/render.o master/run.o master/shot.o master/state.o master/video.o master/zipfn.o master/keymap.o zlib/libz.a master/ramwatch.o master/ramsearch.o master/luaconsole.o master/luasav.o master/luaengine.o 
 	PLATPYOBJ =
 	PLATPYOBJCXX =
-	EXTRA_LIBS = -ldsound -ldinput -lddraw -ldxguid -lcomdlg32 -lcomctl32 -luser32 -lwinmm
+	EXTRA_LIBS = -ldsound -ldinput -lddraw -ldxguid -lcomdlg32 -lcomctl32 -luser32 -lwinmm -llua51 -lgdi32
 	DOZE_FIXUP =
 	ENCODER_OBJ = tools/wdegavi.o tools/degavirc.o
 	ENCODER_LIBS = libvfw/libvfw.a
@@ -94,11 +94,11 @@ else ifeq ($(P),win)
 	PYTHON_LDFLAGS = -L$(PYTHON_PREFIX)/libs -lpython27
 endif
 
-ALLOBJ = dega-s$(EXEEXT) mmvconv$(EXEEXT) degavi$(EXEEXT)
+ALLOBJ = dega-s$(EXEEXT) # mmvconv$(EXEEXT) degavi$(EXEEXT)
 
-ifneq ($(BITS),64)
-ALLOBJ += pydega$(SOEXT)
-endif
+#ifneq ($(BITS),64)
+#ALLOBJ += pydega$(SOEXT)
+#endif
 
 ifeq ($(P),unix)
 
@@ -191,7 +191,7 @@ clean:
 	rm -f $(Z80OBJ) $(DAMOBJ) $(MASTOBJ) $(PLATOBJ) $(PYOBJ) $(PYEMBOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) tools/avioutput.o tools/degavi.o tools/degavirc.o tools/mmvconv.o tools/wdegavi.o doze/dozea.asm* doze/dam doze/dam.exe dega dega.exe degavi degavi.exe mmvconv mmvconv.exe pydega.so pydega.dll pydega.pyd specs
 	make -Czlib clean
 	make -Clibmencoder clean
-	make -Clibvfw clean
+#	make -Clibvfw clean
 
 distclean: clean
 	rm -f *~ */*~

@@ -7,7 +7,7 @@ unsigned char *DispMem=NULL;
 int DispMemPitch=0;
 unsigned int DispFormat=0; // Either a FourCC code or a color depth
 int DispBpp=0; // Bytes per pixel
-int TryOverlay=2;
+int TryOverlay=0;
 static int OverlayColor=0;
 static RECT LastOver={0,0,0,0}; // Last overlay rectangle
 

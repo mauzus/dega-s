@@ -1,4 +1,5 @@
 #include "mastint.h"
+#include "../master/luaengine.h"
 #include <stdio.h>
 #ifdef unix
 #include <unistd.h>
@@ -304,7 +305,7 @@ static void MvidOldPostLoadState(int readonly) {
 
 			videoFile = fopen(videoFilename, "r+b");
 			Truncate(videoFile, newPosition);
-			currentMovie.rerecordCount++;
+			if(!DEGA_LuaRerecordCountSkip()) currentMovie.rerecordCount++;
 
 			fseek(videoFile, 0xc, SEEK_SET);
 			fwrite(&currentMovie.rerecordCount, 4, 1, videoFile);
@@ -359,7 +360,7 @@ void MvidPostLoadState(int readonly) {
 		ma.Len = frameCount*embPacketSize; ma.Data = data;
 		MastAcb(&ma);
 
-		currentMovie.rerecordCount++;
+		if(!DEGA_LuaRerecordCountSkip()) currentMovie.rerecordCount++;
 
 		currentMovie.vidFrameCount = frameCount;
 

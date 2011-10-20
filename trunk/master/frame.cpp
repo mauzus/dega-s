@@ -64,7 +64,19 @@ static LRESULT CALLBACK WindowProc(HWND hWnd,UINT Msg,WPARAM wParam,LPARAM lPara
 //    if (Item==ID_PYTHON_LOAD) { MenuPython(0); return 0; }
 //    if (Item==ID_PYTHON_LOAD_THREAD) { MenuPython(1); return 0; }
 //    if (Item==ID_PYTHON_MEMORY) { MenuPythonFixed("memory.py", 1); return 0; }
-    if (Item==ID_RAM_SEARCH) {
+
+		if (Item==ID_LUA_OPEN) {
+			if(!LuaConsoleHWnd) {
+				LuaConsoleHWnd = CreateDialog(hAppInst, MAKEINTRESOURCE(IDD_LUA), NULL, (DLGPROC) DlgLuaScriptDialog);
+			}
+			else
+				SetForegroundWindow(LuaConsoleHWnd);
+		}
+		if (Item==ID_LUA_CLOSE_ALL) {
+			if(LuaConsoleHWnd)
+				PostMessage(LuaConsoleHWnd, WM_CLOSE, 0, 0);
+		}
+		if (Item==ID_RAM_SEARCH) {
 			if(!RamSearchHWnd) {
 				reset_address_info();
 				RamSearchHWnd = CreateDialog(hAppInst, MAKEINTRESOURCE(IDD_RAMSEARCH), NULL, (DLGPROC) RamSearchProc);
@@ -72,7 +84,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd,UINT Msg,WPARAM wParam,LPARAM lPara
 			else
 				SetForegroundWindow(RamSearchHWnd);
 		}
-    if (Item==ID_RAM_WATCH) {
+		if (Item==ID_RAM_WATCH) {
 			if(!RamWatchHWnd) {
 				RamWatchHWnd = CreateDialog(hAppInst, MAKEINTRESOURCE(IDD_RAMWATCH), NULL, (DLGPROC) RamWatchProc);
 			}

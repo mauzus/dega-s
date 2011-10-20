@@ -14,8 +14,8 @@ extern "C" {
 // Make the INLINE macro
 #undef INLINE
 #define INLINE inline
-#pragma warning (disable:4514) //disable "unreferenced inline function removed" warning message
-#pragma warning (disable:4710) //disable "function not inlined" warning message
+//#pragma warning (disable:4514) //disable "unreferenced inline function removed" warning message
+//#pragma warning (disable:4710) //disable "function not inlined" warning message
 
 // Chip emulators ------------------------------------------------
 // #define EMU_DOZE // Use my 'Doze' Assembler Z80 emulator

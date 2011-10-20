@@ -93,8 +93,17 @@
 #define RW_MENU_FIRST_RECENT_FILE       1326
 #define RW_MENU_LAST_RECENT_FILE        1327
 #define IDC_C_WATCH_SEPARATE            1328
-#define IDC_LUACONSOLE_CHOOSEFONT       1329
-#define IDC_LUACONSOLE_CLEAR            1330
+#define IDD_LUA                         1329
+#define IDC_BUTTON_LUABROWSE            1330
+#define IDC_BUTTON_LUARUN               1331
+#define IDC_BUTTON_LUASTOP              1332
+#define IDC_EDIT_LUAPATH                1333
+#define IDC_LUACONSOLE                  1334
+#define IDC_BUTTON_LUAEDIT              1335
+#define ID_LUA_OPEN                     1336
+#define ID_LUA_CLOSE_ALL                1337
+#define IDC_LUACONSOLE_CHOOSEFONT       1338
+#define IDC_LUACONSOLE_CLEAR            1339
 
 #define ID_FILE_LOADROM                 40001
 #define ID_FILE_RESET                   40002

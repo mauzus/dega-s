@@ -1,3 +1,4 @@
+CC = gcc
 CFLAGS = -O3 --std=c99
 
 OBJS = libvfw.o
