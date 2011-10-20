@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-#pragma warning (disable:4514) // Dave added
-#pragma warning (disable:4710) // Dave added
+//#pragma warning (disable:4514) // Dave added
+//#pragma warning (disable:4710) // Dave added
 
 #ifdef EMU2413_DLL_EXPORTS
   #define EMU2413_API __declspec(dllexport)

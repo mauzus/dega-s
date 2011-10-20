@@ -38,6 +38,8 @@ int RunFrame(int Draw,short *pSound)
   if (!NoInput) InputGet();
   MastDrawDo=Draw; pMsndOut=pSound;
 
+  CallRegisteredLuaFunctions(LUACALL_BEFOREEMULATION); //TODO: find proper place
+
   // Run frame
   EmuFrame();
 
@@ -57,6 +59,8 @@ int RunFrame(int Draw,short *pSound)
   PythonPostFrame();
 
   Update_RAM_Search();
+  DEGA_LuaFrameBoundary();
+  CallRegisteredLuaFunctions(LUACALL_AFTEREMULATION); //TODO: find proper place
 
   return 0;
 }

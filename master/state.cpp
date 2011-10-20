@@ -9,7 +9,7 @@ int AutoLoadSave=0;
 int VideoReadOnly=0;
 int SaveSlot=0;
 
-static char *MakeAutoName(int Battery, int Slot)
+char *MakeAutoName(int Battery, int Slot)
 {
   char *Name=NULL; int Len=0,Extra=0;
   if (EmuTitle==NULL) return NULL;

@@ -79,6 +79,7 @@ static int MediaInit(int Level)
     if (MastEx&MX_GG) { ScrnWidth=160; ScrnHeight=144; } // Game gear
     else              { ScrnWidth=256; ScrnHeight=192; } // Master System
 
+    CallRegisteredLuaFunctions(LUACALL_ONSTART);
   }
 
   if (Level<=30) // DirectDraw

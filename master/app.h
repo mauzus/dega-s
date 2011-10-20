@@ -24,6 +24,26 @@
 
 #include "../mast/mast.h"
 #include "resource.h"
+#include "luaengine.h"
+#include "luaconsole.h"
+
+typedef char s8;
+typedef short s16;
+typedef long s32;
+typedef long long s64;
+
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned long u32;
+typedef unsigned long long u64;
+
+typedef char INT8;
+typedef short INT16;
+typedef long long INT64;
+
+typedef unsigned char UINT8;
+typedef unsigned short UINT16;
+typedef unsigned long long UINT64;
 
 // Make the INLINE macro
 #undef INLINE
@@ -175,6 +195,7 @@ extern char StateName[];
 extern int AutoLoadSave;
 extern int VideoReadOnly;
 extern int SaveSlot;
+char *MakeAutoName(int Battery, int Slot);
 int StateLoad(int Meka);
 int StateSave(int Meka);
 int StateAuto(int Save);
