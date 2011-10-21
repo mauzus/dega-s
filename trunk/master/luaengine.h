@@ -34,7 +34,7 @@ int DEGA_LuaSpeed();
 //int DEGA_LuaFrameskip();
 int DEGA_LuaRerecordCountSkip();
 
-void DEGA_LuaGui();
+void DEGA_LuaGui(unsigned char *s, int width, int height, int bpp, int pitch);
 
 void DEGA_LuaWriteInform();
 

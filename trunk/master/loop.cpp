@@ -393,6 +393,7 @@ int LoopDo()
         RunText(msg, 2*60);
         StateAutoState(0, SaveSlot);
         Update_RAM_Search();
+        DEGA_LuaFrameBoundary();
         MastScreenUpdate();
         DispDraw();
       }
@@ -411,6 +412,7 @@ int LoopDo()
         RunText(msg, 2*60);
         StateAutoState(0, Slot);
         Update_RAM_Search();
+        DEGA_LuaFrameBoundary();
         MastScreenUpdate();
         DispDraw();
       }
@@ -444,9 +446,9 @@ int LoopDo()
         FrameSize();
       }
     }
-    if (Msg.message==WMU_STATELOAD)   { StateLoad(0); Update_RAM_Search(); MastScreenUpdate(); DispDraw(); }
+    if (Msg.message==WMU_STATELOAD)   { StateLoad(0); Update_RAM_Search(); DEGA_LuaFrameBoundary(); MastScreenUpdate(); DispDraw(); }
     if (Msg.message==WMU_STATESAVE)   { StateSave(0); }
-    if (Msg.message==WMU_STATEIMPORT) { StateLoad(1); Update_RAM_Search(); MastScreenUpdate(); DispDraw(); }
+    if (Msg.message==WMU_STATEIMPORT) { StateLoad(1); Update_RAM_Search(); DEGA_LuaFrameBoundary(); MastScreenUpdate(); DispDraw(); }
     if (Msg.message==WMU_STATEEXPORT) { StateSave(1); }
     if (Msg.message==WMU_VGMSTART) { VgmStart(VgmName); }
 
