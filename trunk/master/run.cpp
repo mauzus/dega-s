@@ -8,7 +8,7 @@ static HANDLE hRunThread=NULL;
 static HANDLE hQuitEvent=NULL;
 static DWORD RunId=0,MainId=0;
 
-int StatusMode=STATUS_AUTO;
+int StatusMode=STATUS_SHOW;
 static int StatusCount=-1;
 static int NoInput=0;
 
