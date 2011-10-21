@@ -74,6 +74,10 @@ int MastAreaDega()
     MastAcb(&ma);
   }
 
+  ma.Len = sizeof(MastInput);
+  ma.Data = MastInput;
+  MastAcb(&ma);
+
   // Update banks, colors and sound
   MastMapPage0(); MastMapPage1(); MastMapPage2();
   MdrawCramChangeAll();
