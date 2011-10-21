@@ -57,8 +57,6 @@ static int iScreenBpp    = 4;
 static int iScreenPitch  = 640;
 static int LUA_SCREEN_WIDTH  = 256;
 static int LUA_SCREEN_HEIGHT = 192;
-static int old_screen_width = 0;
-static int old_screen_height = 0;
 
 // Current working directory of the script
 static char luaCWD [_MAX_PATH] = {0};
@@ -91,8 +89,11 @@ static int frameAdvanceWaiting = FALSE;
 static int transparencyModifier = 255;
 
 // Our joypads.
-static short lua_joypads[0x0100];
+static short lua_joypads[2];
 static UINT8 lua_joypads_used;
+static const char *button_mappings[] = {
+	"up","down","left","right","1","2","null","start"
+};
 
 static UINT8 gui_enabled = TRUE;
 static enum { GUI_USED_SINCE_LAST_DISPLAY, GUI_USED_SINCE_LAST_FRAME, GUI_CLEAR } gui_used = GUI_CLEAR;
@@ -845,33 +846,26 @@ static int memory_registerwrite(lua_State *L) {
 //
 //  Reads the joypads as inputted by the user.
 static int joy_get_internal(lua_State *L, bool reportUp, bool reportDown) {
-//	lua_newtable(L); // TODO
-//
-//	// Update the values of all the inputs
-//	const input_field_config *field;
-//	const input_port_config *port;
-//
-//	// iterate over the input ports and add menu items
-//	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
-//		for (field = port->fieldlist; field != NULL; field = field->next) {
-//			const char *name = input_field_name(field);
-//
-//			// add if we match the group and we have a valid name
-//			if (name != NULL && input_condition_true(machine, &field->condition) &&
-//#ifdef MESS
-//				(field->category == 0 || input_category_active(machine, field->category)) &&
-//#endif // MESS
-//				((field->type == IPT_OTHER && field->name != NULL) || input_type_group(machine, field->type, field->player) != IPG_INVALID)) {
-////					type = input_type_is_analog(field->type) ? INPUT_TYPE_ANALOG : INPUT_TYPE_DIGITAL;
-////					bool pressed = input_seq_pressed(machine,input_field_seq(field, SEQ_TYPE_STANDARD));
-//					bool pressed = get_port_digital(port) & field->mask;
-//					if ((pressed && reportDown) || (!pressed && reportUp)) {
-//						lua_pushboolean(L,pressed);
-//						lua_setfield(L, -2, name);
-//					}
-//			}
-//		}
+	unsigned short buttons=0;
+	int which;
+	int i;
+	
+	// Reads the joypads as inputted by the user
+	which = luaL_checkinteger(L,1) - 1;
+	if(which > 1)
+		luaL_error(L,"Invalid input port (valid range 1-2, specified %d)", which);
+	buttons = MastInput[which];
 
+	lua_newtable(L);
+	
+	for (i = 0; i < 8; i++) {
+		bool pressed = (buttons & (1<<i))!=0;
+		if ((pressed && reportDown) || (!pressed && reportUp)) {
+			lua_pushboolean(L, pressed);
+			lua_setfield(L, -2, button_mappings[i]);
+		}
+	}
+	
 	return 1;
 }
 // joypad.get(which)
@@ -902,43 +896,29 @@ static int joypad_getup(lua_State *L)
 //   frame advance. The table should have the right 
 //   keys (no pun intended) set.
 static int joypad_set(lua_State *L) {
-//	unsigned int i = 0; // TODO
-//
-//	// table of buttons.
-//	luaL_checktype(L,1,LUA_TTABLE);
-//
-//	// Set up for taking control of the indicated controller
-//	lua_joypads_used = 1;
-//	memset(lua_joypads,0,0x0100);
-//
-//	// Update the values of all the inputs
-//	const input_field_config *field;
-//	const input_port_config *port;
-//
-//	// iterate over the input ports and add menu items
-//	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
-//		for (field = port->fieldlist; field != NULL; field = field->next) {
-//			const char *name = input_field_name(field);
-//
-//			// add if we match the group and we have a valid name
-//			if (name != NULL && input_condition_true(machine, &field->condition) &&
-//#ifdef MESS
-//				(field->category == 0 || input_category_active(machine, field->category)) &&
-//#endif // MESS
-//				((field->type == IPT_OTHER && field->name != NULL) || input_type_group(machine, field->type, field->player) != IPG_INVALID)) {
-//					lua_getfield(L, 1, name);
-//					if (!lua_isnil(L,-1)) {
-//						if (lua_toboolean(L,-1))
-//							lua_joypads[i] = 1; // pressed
-//						else
-//							lua_joypads[i] = 2; // unpressed
-////						dega_printf_info("*JOYPAD*: '%s' : %d\n",name,lua_joypads[i]);
-//					}
-//					lua_pop(L,1);
-//					i++;
-//			}
-//		}
+	int which;
+	int i;
 
+	// Which joypad we're tampering with
+	which = luaL_checkinteger(L,1);
+	if (which < 1 || which > 2) {
+		luaL_error(L,"Invalid output port (valid range 1-2, specified %d)", which);
+	}
+
+	// And the table of buttons.
+	luaL_checktype(L,2,LUA_TTABLE);
+
+	// Set up for taking control of the indicated controller
+	lua_joypads_used |= 1 << (which-1);
+	lua_joypads[which-1] = 0;
+
+	for (i=0; i < 8; i++) {
+		lua_getfield(L, 2, button_mappings[i]);
+		if (!lua_isnil(L,-1))
+			lua_joypads[which-1] |= 1 << i;
+		lua_pop(L,1);
+	}
+	
 	return 0;
 }
 
@@ -2275,6 +2255,7 @@ static int gui_text(lua_State *L) {
 	else
 		borderColour = gui_optcolour(L,5,LUA_BUILD_PIXEL(255, 0, 0, 0));
 
+
 	gui_prepare();
 
 	LuaDisplayString(msg, y, x, colour, borderColour);
@@ -3332,6 +3313,8 @@ void DEGA_LuaFrameBoundary() {
 	frameBoundary = TRUE;
 	frameAdvanceWaiting = FALSE;
 
+	lua_joypads_used = 0;
+
 	numTries = 1000;
 	chdir(luaCWD);
 	result = lua_resume(thread, 0);
@@ -3552,10 +3535,10 @@ int DEGA_LuaRunning() {
 /**
  * Returns true if Lua would like to steal the given joypad control.
  */
-int DEGA_LuaUsingJoypad() {
+int DEGA_LuaUsingJoypad(int which) {
 	if (!DEGA_LuaRunning())
 		return 0;
-	return lua_joypads_used;
+	return lua_joypads_used & (1 << which);
 }
 
 
@@ -3566,44 +3549,14 @@ int DEGA_LuaUsingJoypad() {
  * This function must not be called more than once per frame. Ideally exactly once
  * per frame (if DEGA_LuaUsingJoypad says it's safe to do so)
  */
-UINT32 DEGA_LuaReadJoypad() {
-//	if (!DEGA_LuaRunning()) // TODO
-//		return 1;
-//
-//	if (lua_joypads_used) {
-//		// Update the values of all the inputs
-//		unsigned int i = 0;
-//		const input_field_config *field;
-//		const input_port_config *port;
-//	
-//		// iterate over the input ports and add menu items
-//		for (port = machine->m_portlist.first(); port != NULL; port = port->next())
-//			for (field = port->fieldlist; field != NULL; field = field->next) {
-//				const char *name = input_field_name(field);
-//	
-//				// add if we match the group and we have a valid name
-//				if (name != NULL && input_condition_true(machine, &field->condition) &&
-//	#ifdef MESS
-//					(field->category == 0 || input_category_active(machine, field->category)) &&
-//	#endif // MESS
-//					((field->type == IPT_OTHER && field->name != NULL) || input_type_group(machine, field->type, field->player) != IPG_INVALID)) {
-//						if(lua_joypads[i] == 1) {
-//							set_port_digital(port, get_port_digital(port) | field->mask);
-//						}
-//						if(lua_joypads[i] == 2) {
-//							set_port_digital(port, get_port_digital(port) & (~field->mask));
-//						}
-////						dega_printf_info("*READ_JOY*: '%s' %d (%X:%X:%X:%X)\n",name,lua_joypads[i],caca,field->mask,(caca ^ field->mask),(caca & field->mask));
-//						i++;
-//				}
-//			}
-//
-//		lua_joypads_used = 0;
-//		memset(lua_joypads,0,0x0100);
-//		return 0;
-//	}
-//	else
-		return 1; // disconnected
+UINT32 DEGA_LuaReadJoypad(int which) {
+	if (!DEGA_LuaRunning())
+		return 0;
+	if (lua_joypads_used & (1 << which)) {
+		return lua_joypads[which];
+	}
+	else
+		return 0; // disconnected
 }
 
 

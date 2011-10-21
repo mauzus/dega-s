@@ -28,8 +28,8 @@ void DEGA_LuaStop();
 void DEGA_OpenLuaConsole();
 int DEGA_LuaRunning();
 
-int DEGA_LuaUsingJoypad();
-UINT32 DEGA_LuaReadJoypad();
+int DEGA_LuaUsingJoypad(int which);
+UINT32 DEGA_LuaReadJoypad(int which);
 int DEGA_LuaSpeed();
 //int DEGA_LuaFrameskip();
 int DEGA_LuaRerecordCountSkip();
