@@ -212,8 +212,8 @@ void MvidStop() {
 	if (videoFile != NULL) {
 		fclose(videoFile);
 		videoFile = NULL;
-//		MdrawRefresh(); // crashes?
 		MvidMovieStopped();
+		MdrawRefresh();
 	}
 }
 
