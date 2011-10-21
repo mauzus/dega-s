@@ -28,6 +28,10 @@ int ShotExit()
   return 0;
 }
 
+void ShotRestore() {
+  if (!Scr) return;
+}
+
 // Called to get a scanline from Mdraw
 void ShotLine()
 {
@@ -66,12 +70,50 @@ void ShotLine()
   while (pd<pEnd);
 }
 
+static unsigned int ReadInt(unsigned char *d)
+{
+  typedef unsigned int RType;
+  return ((RType)d[0] << 24) | ((RType)d[1] << 16) | ((RType)d[2] << 8) | (RType)d[3];
+}
+
 static void WriteInt(unsigned char *d,unsigned int v)
 {
   d[0]=(unsigned char)(v>>24);
   d[1]=(unsigned char)(v>>16);
   d[2]=(unsigned char)(v>> 8);
   d[3]=(unsigned char) v     ;
+}
+
+// load the screenshot from a PNG file
+static int ShotLoadFrom(const char *Name) {
+	FILE *fp = fopen(Name, "rb");
+	if (fp == 0) return 1;
+
+	unsigned char tempBuffer[4] = {0, 0, 0, 0};
+	
+	long offset = 0x21;	// magic number
+	fseek(fp, offset + 4, SEEK_SET);
+	unsigned int ioResult = fread(tempBuffer, 1, 4, fp);
+	if (ioResult < 4 || memcmp(tempBuffer, "IDAT", 4) != 0) { fclose(fp); return 1; }
+
+	fseek(fp, offset, SEEK_SET);
+	fread(tempBuffer, 1, 4, fp);
+
+	unsigned long CompLen = ReadInt(tempBuffer);
+	unsigned char *Comp = (unsigned char *)malloc(CompLen + 8);
+	if (!Comp) { fclose(fp); return 1; }
+
+	fseek(fp, 4, SEEK_CUR);
+	ioResult = fread(Comp, 1, CompLen + 8, fp);
+	if (ioResult < CompLen + 8) { free(Comp); fclose(fp); return 1; }
+	unsigned int Crc = ReadInt(Comp + CompLen + 4);
+	if (Crc != crc32(0, Comp, CompLen + 4)) { free(Comp); fclose(fp); return 1; }
+
+	unsigned long Len = ScrLen;
+	uncompress(Scr, &Len, Comp + 4, CompLen);
+
+	free(Comp);
+	fclose(fp);
 }
 
 // Save the screenshot to a PNG file

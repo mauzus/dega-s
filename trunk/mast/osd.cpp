@@ -5,7 +5,17 @@ int MdrawOsdOptions = 3;
 #define CHARWIDTH 7
 #define CHARHEIGHT 7
 
-static unsigned short Palette[2] = { 0000, 0666 };
+static unsigned short Palette[2] = { 0x0033, 0x08CC };
+
+static unsigned char CharDivider[CHARHEIGHT][CHARWIDTH] = {
+{ 0, 0, 0, 2, 1, 0, 0 },
+{ 0, 0, 0, 2, 1, 0, 0 },
+{ 0, 0, 2, 1, 0, 0, 0 },
+{ 0, 0, 2, 1, 0, 0, 0 },
+{ 0, 2, 1, 0, 0, 0, 0 },
+{ 0, 2, 1, 0, 0, 0, 0 },
+{ 0, 0, 0, 0, 0, 0, 0 }
+};
 
 static unsigned char CharUp[CHARHEIGHT][CHARWIDTH] = {
 { 0, 0, 0, 2, 0, 0, 0 },
@@ -193,7 +203,7 @@ static void MdrawOsdChar(unsigned char character[CHARHEIGHT][CHARWIDTH], int x, 
 void MdrawOsd() {
 // gg  24 168
 // sms 16 192
-	char framestr[16];
+	char framestr[32];
 	char *frameptr;
 	int x;
 	int xlef = MastEx&MX_GG?64:16, ybot = MastEx&MX_GG?168:192;
@@ -215,10 +225,23 @@ void MdrawOsd() {
 			MdrawOsdChar(CharNumbers[*frameptr - '0'], x, ybot-CHARHEIGHT-1);
 		}
 	}
-	if (MdrawOsdOptions&OSD_FRAMECOUNT && MvidInVideoRecord())
-		MdrawOsdChar(CharRecord, xrig-8, ybot-ydif);
-	if (MdrawOsdOptions&OSD_FRAMECOUNT && MvidInVideoPlayback())
-		MdrawOsdChar(CharPlayback, xrig-8, ybot-ydif);
+	if ((MdrawOsdOptions&OSD_FRAMECOUNT)) {
+		snprintf(framestr, 32, "%d", frameCount);
+		for (x = xlef, frameptr = framestr; *frameptr; frameptr++, x+=CHARWIDTH) {
+			MdrawOsdChar(CharNumbers[*frameptr - '0'], x, ybot-CHARHEIGHT-1);
+		}
+		if (MvidInVideoPlayback()) {
+			MdrawOsdChar(CharDivider, x, ybot-CHARHEIGHT-1);
+			snprintf(framestr, 32, "%d", MvidGetFrameCount());
+			for (x += CHARWIDTH-1, frameptr = framestr; *frameptr; frameptr++, x+=CHARWIDTH) {
+				MdrawOsdChar(CharNumbers[*frameptr - '0'], x, ybot-CHARHEIGHT-1);
+			}
+		}
+		if (MvidInVideoRecord())
+			MdrawOsdChar(CharRecord, xrig-8, ybot-ydif);
+		if (MvidInVideoPlayback())
+			MdrawOsdChar(CharPlayback, xrig-8, ybot-ydif);
+	}
 }
 
 

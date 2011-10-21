@@ -56,7 +56,7 @@ static int MediaInit(int Level)
     unsigned int Enabled=MF_GRAYED;
     char WinName[128]="";
     Ret=EmuLoad();
-    if (Ret==0) { if (MenuHideOnLoad) ShowMenu=0; Enabled=MF_ENABLED; LoopPause=0; }
+    if (Ret==0) { if (MenuHideOnLoad) ShowMenu=0; Enabled=MF_ENABLED; /*LoopPause=0;*/ }
     else EmuFree();
     EnableMenuItem(hFrameMenu,ID_FILE_RESET    ,Enabled);
     EnableMenuItem(hFrameMenu,ID_FILE_FREEROM  ,Enabled);
@@ -122,11 +122,16 @@ static int MediaInit(int Level)
     MsndRate=DSoundSamRate; MsndLen=DSoundSegLen;
     MsndInit();
   }
+  
+  if (Level<=58) // Load state
+  {
+    Update_RAM_Search();
+    DEGA_LuaFrameBoundary();
+    DispDraw();
+  }
 
   if (Level<=60) // Run thread
   {
-    ShotExit(); // Get rid of previous screenshots
-
     // Make sure we have a screenshot image in situations where the image isn't in motion
     // (this is done so that the user takes a screenshot of the paused frame)
     if (Msg.wParam==ID_SETUP_ONEFRAME || Msg.wParam==ID_SETUP_PAUSE)
@@ -257,13 +262,22 @@ struct CustomKeyMap {
 };
 
 static void TranslateCustomKeys(HWND hwnd, struct CustomKeyMap *map, MSG *msg) {
-	if (msg->hwnd != hwnd || msg->message != WM_KEYDOWN) return;
-	while (map->key != 0 || map->command != 0) {
-		if (msg->wParam == KeyMappings[map->key]) {
-			SendMessage(hwnd, WM_COMMAND, map->command, 0);
-			return;
+	if (msg->hwnd != hwnd) return;
+	if (msg->message == WM_KEYDOWN) {
+		while (map->key != 0 || map->command != 0) {
+			if (msg->wParam == KeyMappings[0][map->key]) {
+				CheckModifierKeys();
+				for (int i = 1; i < KMODIFIERCOUNT; ++i) {
+					if (KeyMappings[i][map->key] != HeldModifierKeys[i] && ModifierKeys[i] != msg->wParam) {
+						goto loop;
+					}
+				}
+				SendMessage(hwnd, WM_COMMAND, map->command, 0);
+				return;
+			}
+loop:
+			map++;
 		}
-		map++;
 	}
 }
 
@@ -335,7 +349,11 @@ int LoopDo()
     // Perform any changes which are needed
     if (Msg.message==WMU_COMMAND)
     {
-      if (Msg.wParam==ID_FILE_RESET) MastReset();
+      if (Msg.wParam==ID_FILE_RESET)
+      {
+        MastReset();
+        DispDraw();
+      }
 
       if (Msg.wParam==ID_SETUP_PAL) SetupPal=!SetupPal;
       if (Msg.wParam==ID_SETUP_JAPAN) MastEx^=MX_JAPAN;
@@ -388,41 +406,37 @@ int LoopDo()
       }
       if (Msg.wParam==ID_STATE_QUICKLOAD)
       {
-        char msg[20];
-        snprintf(msg, sizeof(msg), "Quick Load %d", SaveSlot);
+        char msg[32];
+        int Ret = StateAutoState(0, SaveSlot);
+        if (Ret) snprintf(msg, sizeof(msg), "Cannot Quick Load %d", SaveSlot);
+        else     snprintf(msg, sizeof(msg), "Quick Load %d", SaveSlot);
         RunText(msg, 2*60);
-        StateAutoState(0, SaveSlot);
-        Update_RAM_Search();
-        DEGA_LuaFrameBoundary();
-        MastScreenUpdate();
-        DispDraw();
       }
       if (Msg.wParam==ID_STATE_QUICKSAVE)
       {
-        char msg[20];
-        snprintf(msg, sizeof(msg), "Quick Save %d", SaveSlot);
+        char msg[32];
+        int Ret = StateAutoState(1, SaveSlot);
+        if (Ret) snprintf(msg, sizeof(msg), "Cannot Quick Save %d", SaveSlot);
+        else     snprintf(msg, sizeof(msg), "Quick Save %d", SaveSlot);
         RunText(msg, 2*60);
-        StateAutoState(1, SaveSlot);
-      }
+     }
       if (Msg.wParam>=ID_STATE_LOAD_SLOT(0) && Msg.wParam<=ID_STATE_LOAD_SLOT(9))
       {
         int Slot = Msg.wParam-ID_STATE_LOAD_SLOT_START;
-        char msg[20];
-        snprintf(msg, sizeof(msg), "Quick Load %d", Slot);
+        char msg[32];
+        int Ret = StateAutoState(0, Slot);
+        if (Ret) snprintf(msg, sizeof(msg), "Cannot Quick Load %d", Slot);
+        else     snprintf(msg, sizeof(msg), "Quick Load %d", Slot);
         RunText(msg, 2*60);
-        StateAutoState(0, Slot);
-        Update_RAM_Search();
-        DEGA_LuaFrameBoundary();
-        MastScreenUpdate();
-        DispDraw();
       }
       if (Msg.wParam>=ID_STATE_SAVE_SLOT(0) && Msg.wParam<=ID_STATE_SAVE_SLOT(9))
       {
         int Slot = Msg.wParam-ID_STATE_SAVE_SLOT_START;
-        char msg[20];
-        snprintf(msg, sizeof(msg), "Quick Save %d", Slot);
+        char msg[32];
+        int Ret = StateAutoState(1, Slot);
+        if (Ret) snprintf(msg, sizeof(msg), "Cannot Quick Save %d", Slot);
+        else     snprintf(msg, sizeof(msg), "Quick Save %d", Slot);
         RunText(msg, 2*60);
-        StateAutoState(1, Slot);
       }
       if (Msg.wParam==ID_SETUP_SPEEDUP) { FrameMult++; }
       if (Msg.wParam==ID_SETUP_SLOWDOWN) { FrameMult--; }
@@ -446,9 +460,9 @@ int LoopDo()
         FrameSize();
       }
     }
-    if (Msg.message==WMU_STATELOAD)   { StateLoad(0); Update_RAM_Search(); DEGA_LuaFrameBoundary(); MastScreenUpdate(); DispDraw(); }
+    if (Msg.message==WMU_STATELOAD)   { StateLoad(0); }
     if (Msg.message==WMU_STATESAVE)   { StateSave(0); }
-    if (Msg.message==WMU_STATEIMPORT) { StateLoad(1); Update_RAM_Search(); DEGA_LuaFrameBoundary(); MastScreenUpdate(); DispDraw(); }
+    if (Msg.message==WMU_STATEIMPORT) { StateLoad(1); }
     if (Msg.message==WMU_STATEEXPORT) { StateSave(1); }
     if (Msg.message==WMU_VGMSTART) { VgmStart(VgmName); }
 
@@ -497,9 +511,9 @@ MainLoop:
         if (Msg.wParam==ID_SOUND_VGMLOG_SAMPLEACCURATE) { InitLevel=60; break; }
         if (Msg.wParam==ID_VIDEO_STOP)         { InitLevel=60; break; }
         if (Msg.wParam==ID_VIDEO_READONLY)     { InitLevel=70; break; }
-        if (Msg.wParam==ID_STATE_QUICKLOAD)    { InitLevel=60; break; }
+        if (Msg.wParam==ID_STATE_QUICKLOAD)    { InitLevel=58; break; }
         if (Msg.wParam==ID_STATE_QUICKSAVE)    { InitLevel=60; break; }
-        if (Msg.wParam>=ID_STATE_LOAD_SLOT(0) && Msg.wParam<=ID_STATE_LOAD_SLOT(9)) { InitLevel=60; break; }
+        if (Msg.wParam>=ID_STATE_LOAD_SLOT(0) && Msg.wParam<=ID_STATE_LOAD_SLOT(9)) { InitLevel=58; break; }
         if (Msg.wParam>=ID_STATE_SAVE_SLOT(0) && Msg.wParam<=ID_STATE_SAVE_SLOT(9)) { InitLevel=60; break; }
         if (Msg.wParam==ID_SETUP_SPEEDUP)      { InitLevel=50; break; }
         if (Msg.wParam==ID_SETUP_SLOWDOWN)     { InitLevel=50; break; }
@@ -530,9 +544,9 @@ MainLoop:
         if (Msg.wParam==ID_INPUT_P2_HOLD_1    ) AutoHold[1]^=0x10;
         if (Msg.wParam==ID_INPUT_P2_HOLD_2    ) AutoHold[1]^=0x20;
       }
-      if (Msg.message==WMU_STATELOAD) { InitLevel=60; break; }
+      if (Msg.message==WMU_STATELOAD) { InitLevel=58; break; }
       if (Msg.message==WMU_STATESAVE) { InitLevel=60; break; }
-      if (Msg.message==WMU_STATEIMPORT) { InitLevel=60; break; }
+      if (Msg.message==WMU_STATEIMPORT) { InitLevel=58; break; }
       if (Msg.message==WMU_STATEEXPORT) { InitLevel=60; break; }
       if (Msg.message==WMU_VGMSTART)    { InitLevel=60; break; }
 

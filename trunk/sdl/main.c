@@ -240,6 +240,7 @@ void HandlePythonThread(void) {
 	
 	if (!python) {
 		puts("Python not available!");
+		free(buffer);
 		return;
 	}
 

@@ -118,6 +118,9 @@ int EmuLoad()
 
   MastSetRom(EmuRom,EmuRomLen); // Plug in the rom
   MastFlagsFromHeader();
+  
+  DispDraw(); // doesn't have any effect now...
+
   return 0;
 }
 

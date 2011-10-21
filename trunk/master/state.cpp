@@ -32,6 +32,20 @@ char *MakeAutoName(int Battery, int Slot)
   return Name;
 }
 
+static int StateSeekcb(long int offset, int origin)
+{
+       if (gf!=NULL) return gzseek(gf,offset,origin);
+  else if (sf!=NULL) return fseek(sf,offset,origin);
+  return -1;
+}
+
+static long int StateTellcb()
+{
+       if (gf!=NULL) return gztell(gf);
+  else if (sf!=NULL) return ftell(sf);
+  return -1;
+}
+
 static int StateLoadAcb(struct MastArea *pma)
 {
        if (gf!=NULL) return gzread(gf,pma->Data,pma->Len);
@@ -41,6 +55,7 @@ static int StateLoadAcb(struct MastArea *pma)
 
 int StateLoad(int Meka)
 {
+  int Ret=0;
   if (StateName[0]==0) return 1;
   
   if (Meka==0) gf=gzopen(StateName,"rb");
@@ -49,16 +64,27 @@ int StateLoad(int Meka)
 
   // Scan state
   MastAcb=StateLoadAcb;
-  if (Meka) MastAreaMeka(); else {
-    MastAreaDega();
-    MvidPostLoadState(VideoReadOnly);
+  MastSeekcb=StateSeekcb;
+  MastTellcb=StateTellcb;
+  if (Meka) Ret=MastAreaMeka();
+  else {
+    Ret=MvidPreLoadState(VideoReadOnly);
+    if (Ret==0) {
+      Ret=MastAreaDega();
+      if (Ret==0) {
+        MvidPostLoadState(VideoReadOnly);
+        MdrawRefresh();
+      }
+    }
   }
+  MastTellcb=MastTellcbNull;
+  MastSeekcb=MastSeekcbNull;
   MastAcb=MastAcbNull;
 
   if (sf!=NULL) fclose(sf); sf=NULL;
   if (gf!=NULL) gzclose(gf); gf=NULL;
 
-  return 0;
+  return Ret;
 }
 
 // ------------------------------------------------------------
@@ -72,6 +98,7 @@ static int StateSaveAcb(struct MastArea *pma)
 
 int StateSave(int Meka)
 {
+  int Ret=0;
   if (StateName[0]==0) return 1;
 
   if (Meka==0) gf=gzopen(StateName,"wb");
@@ -80,15 +107,20 @@ int StateSave(int Meka)
 
   // Scan state
   MastAcb=StateSaveAcb;
-  if (Meka) MastAreaMeka(); else {
-    MastAreaDega();
-    MvidPostSaveState();
+  MastSeekcb=StateSeekcb;
+  MastTellcb=StateTellcb;
+  if (Meka) Ret=MastAreaMeka();
+  else {
+    Ret=MastAreaDega();
+    if (Ret==0) MvidPostSaveState();
   }
+  MastTellcb=MastTellcbNull;
+  MastSeekcb=MastSeekcbNull;
   MastAcb=MastAcbNull;
 
   if (sf!=NULL) fclose(sf); sf=NULL;
   if (gf!=NULL) gzclose(gf); gf=NULL;
-  return 0;
+  return Ret;
 }
 
 // ------------------------------------------------------------
@@ -155,6 +187,7 @@ int BatteryLoad()
 int StateAutoState(int Save, int Slot)
 {
   char *Name=NULL;
+  int Ret = 0;
   // Load/Save state
 
   // Make the name of the auto save file
@@ -165,15 +198,15 @@ int StateAutoState(int Save, int Slot)
   if (Save)
   {
     CreateDirectory("saves",NULL); // Make sure there is a directory
-    StateSave(0);
+    Ret = StateSave(0);
   }
   else
   {
-    StateLoad(0);
+    Ret = StateLoad(0);
   }
 
   memset(StateName,0,sizeof(StateName));
-  return 0;
+  return Ret;
 }
 
 // Load/Save battery ram and state

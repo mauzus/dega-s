@@ -1,5 +1,4 @@
 #include "mastint.h"
-#include "../master/luaengine.h"
 #include <stdio.h>
 #ifdef unix
 #include <unistd.h>
@@ -15,10 +14,14 @@ static char videoFilename[256] = "";
 static int videoMode = 0;
 static struct MvidHeader currentMovie;
 
+extern int VideoReadOnly;
+
 int frameCount;
 
 #define HEADER_SIZE 0xF4
 #define SAVE_STATE_SIZE 41472
+
+int DEGA_LuaRerecordCountSkip(); // ../master/luaengine.cpp
 
 static int MastAcbVideoRead(struct MastArea *area) {
 	return fread(area->Data, area->Len, 1, videoFile);
@@ -134,6 +137,8 @@ int MvidStart(char *filename, int mode, int reset, char *author) {
 		videoFile = fopen(filename, "wb");
 		if (videoFile != NULL) {
 			int zero = 0;
+			VideoReadOnly = 0;
+
 			fwrite("MMV", 4, 1, videoFile);    // 0000: identifier
 			fwrite(&MastVer, 4, 1, videoFile); // 0004: version
 			currentMovie.vidFrameCount = 0;
@@ -191,6 +196,10 @@ int MvidStart(char *filename, int mode, int reset, char *author) {
 	return currentMovie.vidFrameCount;
 }
 
+int MvidGetMode() {
+	return videoMode;
+}
+
 int MvidGetFrameCount() {
 	return currentMovie.vidFrameCount;
 }
@@ -201,9 +210,9 @@ int MvidGetRerecordCount() {
 
 void MvidStop() {
 	if (videoFile != NULL) {
-		MastInput[0] = MastInput[1] = 0;
 		fclose(videoFile);
 		videoFile = NULL;
+		MdrawRefresh();
 		MvidMovieStopped();
 	}
 }
@@ -254,6 +263,20 @@ int MvidInVideoRecord() {
 		return 0;
 }
 
+#ifdef unix
+static void Truncate(FILE *file, int size) {
+	ftruncate(fileno(file), size);
+}
+#else
+#ifdef WIN32
+static void Truncate(FILE *file, int size) {
+	_chsize(fileno(file), size);
+}
+#else
+#error no truncate implementation available!
+#endif
+#endif
+
 void MvidPreFrame() {
 	int result;
 	frameCount++;
@@ -279,6 +302,9 @@ void MvidPreFrame() {
 					fwrite(&zero, 1, 1, videoFile);
 				}
 
+				if (currentMovie.vidFrameCount > frameCount) {
+					Truncate(videoFile, currentMovie.inputOffset+frameCount*currentMovie.packetSize);
+				}
 				currentMovie.vidFrameCount=frameCount;
 				fseek(videoFile, 0x8, SEEK_SET);
 				fwrite(&frameCount, 4, 1, videoFile);
@@ -289,111 +315,135 @@ void MvidPreFrame() {
 	}
 }
 
-#ifdef unix
-static void Truncate(FILE *file, int size) {
-	ftruncate(fileno(file), size);
-}
-#else
-#ifdef WIN32
-static void Truncate(FILE *file, int size) {
-	long oldOffset = ftell(file);
-	fseek(file, size, SEEK_SET);
-	SetEndOfFile((HANDLE)_get_osfhandle(_fileno(file)));
-	fseek(file, oldOffset, SEEK_SET);
-}
-#else
-#error no truncate implementation available!
-#endif
-#endif
+static struct EmbededVideoFileInfo {
+	int vidFrameCount;
+	int inputOffset;
+	int packetSize;
+	int isOldType;
+} embInfo;
 
-static void MvidOldPostLoadState(int readonly) {
+int MvidPreLoadState(int readonly) {
+	int embFrameCount = MastAreaMvidFrameCount();
 	if (videoFile != NULL) {
-		int newPosition = currentMovie.inputOffset + frameCount*currentMovie.packetSize;
-
-		if (readonly != 0 && videoMode == PLAYBACK_MODE) {
-			fseek(videoFile, newPosition, SEEK_SET);
-		} else {
-			fclose(videoFile);
-
-			videoFile = fopen(videoFilename, "r+b");
-			Truncate(videoFile, newPosition);
-			if(!DEGA_LuaRerecordCountSkip()) currentMovie.rerecordCount++;
-
-			fseek(videoFile, 0xc, SEEK_SET);
-			fwrite(&currentMovie.rerecordCount, 4, 1, videoFile);
-
-			fseek(videoFile, 0, SEEK_END);
-			videoMode = RECORD_MODE;
+		unsigned char *data = (unsigned char *)malloc(0x20);
+		MastSeekcb(MastAreaMvidOffset(), SEEK_SET); //magic numbers
+		MastArea ma;
+		ma.Len = 0x20; ma.Data = data;
+		if (MastAcb(&ma) == 0) { /* old-style save state without embedded video file */
+			embInfo.isOldType = 1;
+			free(data);
+			return -1;
 		}
+
+		int embVidFrameCount = *(int *)(data + 0x08);
+		if (embVidFrameCount == 0) embVidFrameCount = min(frameCount, currentMovie.vidFrameCount);
+		int embInputOffset = *(int *)(data + 0x18);
+		if (embInputOffset == 0) embInputOffset = currentMovie.beginReset ? 0x60 : 0x60+25088;
+		int embPacketSize = *(int *)(data + 0x1c);
+		if (embPacketSize == 0) embPacketSize = 2;
+
+		free(data);
+
+		if (currentMovie.packetSize != embPacketSize) {
+			return 1;
+		}
+
+		if (embFrameCount > embVidFrameCount) {
+			return 2;
+		}
+
+		if (readonly != 0) {
+			if (embFrameCount > currentMovie.vidFrameCount) {
+				return 3;
+			}
+
+			unsigned int baseSize = embFrameCount*embPacketSize;
+			unsigned char *videoFileData = (unsigned char *)malloc(baseSize);
+			data = (unsigned char *)malloc(baseSize);
+
+			long int originalPos = ftell(videoFile);
+			fseek(videoFile, currentMovie.inputOffset, SEEK_SET);
+			fread(videoFileData, baseSize, 1, videoFile);
+			fseek(videoFile, originalPos, SEEK_SET);
+			ma.Len = baseSize; ma.Data = data;
+			MastSeekcb(embInputOffset - 0x20, SEEK_CUR);
+			MastAcb(&ma);
+
+			int Ret = memcmp(videoFileData, data, baseSize);
+			if (Ret != 0) {
+				free(data);
+				free(videoFileData);
+				return 4;
+			}
+
+			free(data);
+			free(videoFileData);
+
+			return 0;
+		}
+
+		embInfo.vidFrameCount = embVidFrameCount;
+		embInfo.inputOffset = embInputOffset;
+		embInfo.packetSize = embPacketSize;
+		embInfo.isOldType = 0;
 	}
+	return 0;
 }
 
 void MvidPostLoadState(int readonly) {
 	if (videoFile != NULL) {
-		MastArea ma;
-		unsigned char *data;
-		int size, embInputOffset, embPacketSize;
-		if (frameCount == 0) {
-			MvidStop();
-			return;
-		}
-
-		size = currentMovie.inputOffset + frameCount*currentMovie.packetSize;
-
+		int newPos = currentMovie.inputOffset + frameCount*currentMovie.packetSize;
 		if (readonly != 0) {
 			if (videoMode == RECORD_MODE) {
 				fclose(videoFile);
 				videoFile = fopen(videoFilename, "rb");
 				videoMode = PLAYBACK_MODE;
 			}
-			fseek(videoFile, size, SEEK_SET);
-			return;
+		} else {
+			fclose(videoFile);
+			videoFile = fopen(videoFilename, "r+b");
+
+			if(!DEGA_LuaRerecordCountSkip()) currentMovie.rerecordCount++;
+
+			if (embInfo.isOldType != 0) {
+				currentMovie.vidFrameCount = frameCount;
+
+				Truncate(videoFile, newPos);
+				fseek(videoFile, 0x8, SEEK_SET);
+				fwrite(&currentMovie.vidFrameCount, 4, 1, videoFile);
+				fwrite(&currentMovie.rerecordCount, 4, 1, videoFile);
+			} else {
+				currentMovie.vidFrameCount = embInfo.vidFrameCount;
+
+				int size = embInfo.vidFrameCount*embInfo.packetSize;
+				unsigned char *data = (unsigned char *)malloc(size);
+				MastArea ma;
+				ma.Len = size; ma.Data = data;
+				MastSeekcb(embInfo.inputOffset, SEEK_CUR);
+				MastAcb(&ma);
+
+				Truncate(videoFile, currentMovie.inputOffset);
+				fseek(videoFile, 0x8, SEEK_SET);
+				fwrite(&currentMovie.vidFrameCount, 4, 1, videoFile);
+				fwrite(&currentMovie.rerecordCount, 4, 1, videoFile);
+
+				fseek(videoFile, 0, SEEK_END);
+				fwrite(data, size, 1, videoFile);
+				free(data);
+			}
+			videoMode = RECORD_MODE;
 		}
-
-		data = (unsigned char *)malloc(0x20);
-
-		ma.Len = 0x20; ma.Data = data;
-		if (MastAcb(&ma) == 0) { /* old-style save state without embedded video file */
-			free(data);
-			MvidOldPostLoadState(readonly);
-			return;
+		// memset(MastInput, 0, sizeof(MastInput));
+		if (frameCount > 0) {
+			fseek(videoFile, newPos - currentMovie.packetSize, SEEK_SET);
+			if (fread(MastInput, sizeof(MastInput), 1, videoFile) == 0) {
+				// hmmm
+				MvidStop();
+			}
 		}
-
-		embInputOffset = *(int *)(data + 0x18); if (embInputOffset == 0) embInputOffset = currentMovie.beginReset ? 0x60 : 0x60+25088;
-		embPacketSize = *(int *)(data + 0x1c); if (embPacketSize == 0) embPacketSize = 2;
-
-		free(data);
-		data = (unsigned char *)malloc(embInputOffset - 0x20);
-		ma.Len = embInputOffset - 0x20; ma.Data = data;
-		MastAcb(&ma);
-
-		free(data);
-		data = (unsigned char *)malloc(frameCount*embPacketSize);
-		ma.Len = frameCount*embPacketSize; ma.Data = data;
-		MastAcb(&ma);
-
-		if(!DEGA_LuaRerecordCountSkip()) currentMovie.rerecordCount++;
-
-		currentMovie.vidFrameCount = frameCount;
-
-		fclose(videoFile);
-		videoFile = fopen(videoFilename, "r+b");
-		Truncate(videoFile, currentMovie.inputOffset);
-
-		fseek(videoFile, 0x8, SEEK_SET);
-		fwrite(&frameCount, 4, 1, videoFile);
-		fwrite(&currentMovie.rerecordCount, 4, 1, videoFile);
-
-		currentMovie.packetSize = embPacketSize;
-		fseek(videoFile, 0x1c, SEEK_SET);
-		fwrite(&currentMovie.packetSize, 4, 1, videoFile);
-
-		fseek(videoFile, 0, SEEK_END);
-		fwrite(data, frameCount*embPacketSize, 1, videoFile);
-		free(data);
-
-		videoMode = RECORD_MODE;
+		fseek(videoFile, newPos, SEEK_SET);
 	}
+	memset(&embInfo, 0, sizeof(embInfo));
 }
 
 void MvidPostSaveState() {
@@ -404,17 +454,23 @@ void MvidPostSaveState() {
 		FILE *readVideoFile;
 
 		fflush(videoFile); /* ensure video file fully written to disk */
-		size = currentMovie.inputOffset + frameCount*currentMovie.packetSize;
+		size = currentMovie.inputOffset + currentMovie.vidFrameCount*currentMovie.packetSize;
 		data = (unsigned char *)malloc(size);
 
 		readVideoFile = fopen(videoFilename, "rb");
 		fread(data, size, 1, readVideoFile);
 
-		*(int *)(data + 0x8) = frameCount; /* TODO magic number */
+		*(int *)(data + 0x8) = currentMovie.vidFrameCount; /* TODO magic number */
 
 		ma.Len = size; ma.Data = data; MastAcb(&ma);
 
 		free(data);
 		fclose(readVideoFile);
 	}
+}
+
+// Partially implemented
+void MvidPostHardReset() {
+	frameCount = 0;
+	memset(MastInput, 0, sizeof(MastInput));
 }

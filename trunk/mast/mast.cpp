@@ -43,6 +43,7 @@ int MastInit()
 
 int MastExit()
 {
+  MvidStop();
   MastSetRom(NULL,0);
 
   // Exit space for the machine state
@@ -55,6 +56,7 @@ int MastExit()
 
 int MastSetRom(unsigned char *Rom,int RomLen)
 {
+  MvidStop();
   memset(&Mastz,0,sizeof(Mastz));
   Mastz.Rom=Rom; Mastz.RomLen=RomLen;
   MastMapMemory(); // Map memory
@@ -138,6 +140,7 @@ int MastReset()
   Z80.sp.w.l=0xdff0; // bios sets
 #endif
 
+  MdrawRefresh();
   return 0;
 }
 
@@ -147,6 +150,6 @@ int MastHardReset()
   memset(&Masta,0,sizeof(Masta));
   memset(pMastb,0,sizeof(*pMastb));
   MsndRefresh(); // Reset sound
+
   return MastReset();
 }
-

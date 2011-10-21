@@ -237,6 +237,7 @@ void MvidModeChanged() {}
 void MvidMovieStopped() {
 	EnableMenuItem(hFrameMenu,ID_VIDEO_STOP, MF_GRAYED);
 	RunText("Movie stopped", 2*60);
+	DispDraw();
 }
 
 static BOOL CALLBACK VideoPropertiesProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {

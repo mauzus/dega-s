@@ -63,7 +63,13 @@ int ConfLoad()
       char buf[20], *value;
       snprintf(buf, sizeof(buf), "Key%dMapping", i);
       value = LabelCheck(Line, buf);
-      if (value!=NULL) KeyMappings[i] = strtol(value,NULL,0);
+      if (value!=NULL) KeyMappings[0][i] = strtol(value,&value,0);
+      if (value!=NULL) {
+        int modifiers = strtol(value,NULL,0);
+        for (int j = 1; j < KMODIFIERCOUNT; ++j) {
+          KeyMappings[j][i] = (modifiers >> j) & 1;
+        }
+      }
     }
 
     //Ram Watch Settings
@@ -129,7 +135,11 @@ int ConfSave()
     fprintf (h, "\n// Keys\n");
     for (i = 0; i < KMAPCOUNT; i++)
     {
-      fprintf( h, "Key%dMapping %d\n", i, KeyMappings[i]);
+      int modifiers = 0;
+      for (int j = 1; j < KMODIFIERCOUNT; ++j) {
+        modifiers |= (KeyMappings[j][i] << j);
+      }
+      fprintf( h, "Key%dMapping %d %d\n", i, KeyMappings[0][i], modifiers);
     }
 
     //Ram Watch Settings

@@ -16,37 +16,37 @@ int InputGet()
   if (UseJoystick==0)
   {
     // Keyboard
-    if (DirInputState(KeyMappings[KMAP_UP]   )) MastInput[0]|=0x01;
-    if (DirInputState(KeyMappings[KMAP_DOWN] )) MastInput[0]|=0x02;
-    if (DirInputState(KeyMappings[KMAP_LEFT] )) MastInput[0]|=0x04;
-    if (DirInputState(KeyMappings[KMAP_RIGHT])) MastInput[0]|=0x08;
-    if (DirInputState(KeyMappings[KMAP_1]    )) MastInput[0]|=0x10;
-    if (DirInputState(KeyMappings[KMAP_2]    )) MastInput[0]|=0x20;
-    if (DirInputState(KeyMappings[KMAP_START])) MastInput[0]|=0x80;
+    if (DirInputState(KeyMappings[0][KMAP_UP]   )) MastInput[0]|=0x01;
+    if (DirInputState(KeyMappings[0][KMAP_DOWN] )) MastInput[0]|=0x02;
+    if (DirInputState(KeyMappings[0][KMAP_LEFT] )) MastInput[0]|=0x04;
+    if (DirInputState(KeyMappings[0][KMAP_RIGHT])) MastInput[0]|=0x08;
+    if (DirInputState(KeyMappings[0][KMAP_1]    )) MastInput[0]|=0x10;
+    if (DirInputState(KeyMappings[0][KMAP_2]    )) MastInput[0]|=0x20;
+    if (DirInputState(KeyMappings[0][KMAP_START])) MastInput[0]|=0x80;
 
-    if (DirInputState(KeyMappings[KMAP_P2_UP]   )) MastInput[1]|=0x01;
-    if (DirInputState(KeyMappings[KMAP_P2_DOWN] )) MastInput[1]|=0x02;
-    if (DirInputState(KeyMappings[KMAP_P2_LEFT] )) MastInput[1]|=0x04;
-    if (DirInputState(KeyMappings[KMAP_P2_RIGHT])) MastInput[1]|=0x08;
-    if (DirInputState(KeyMappings[KMAP_P2_1]    )) MastInput[1]|=0x10;
-    if (DirInputState(KeyMappings[KMAP_P2_2]    )) MastInput[1]|=0x20;
+    if (DirInputState(KeyMappings[0][KMAP_P2_UP]   )) MastInput[1]|=0x01;
+    if (DirInputState(KeyMappings[0][KMAP_P2_DOWN] )) MastInput[1]|=0x02;
+    if (DirInputState(KeyMappings[0][KMAP_P2_LEFT] )) MastInput[1]|=0x04;
+    if (DirInputState(KeyMappings[0][KMAP_P2_RIGHT])) MastInput[1]|=0x08;
+    if (DirInputState(KeyMappings[0][KMAP_P2_1]    )) MastInput[1]|=0x10;
+    if (DirInputState(KeyMappings[0][KMAP_P2_2]    )) MastInput[1]|=0x20;
 
     if (AltFrame)
     {
-      if (DirInputState(KeyMappings[KMAP_AUTO_UP]   )) MastInput[0]|=0x01;
-      if (DirInputState(KeyMappings[KMAP_AUTO_DOWN] )) MastInput[0]|=0x02;
-      if (DirInputState(KeyMappings[KMAP_AUTO_LEFT] )) MastInput[0]|=0x04;
-      if (DirInputState(KeyMappings[KMAP_AUTO_RIGHT])) MastInput[0]|=0x08;
-      if (DirInputState(KeyMappings[KMAP_AUTO_1]    )) MastInput[0]|=0x10;
-      if (DirInputState(KeyMappings[KMAP_AUTO_2]    )) MastInput[0]|=0x20;
-      if (DirInputState(KeyMappings[KMAP_AUTO_START])) MastInput[0]|=0x80;
+      if (DirInputState(KeyMappings[0][KMAP_AUTO_UP]   )) MastInput[0]|=0x01;
+      if (DirInputState(KeyMappings[0][KMAP_AUTO_DOWN] )) MastInput[0]|=0x02;
+      if (DirInputState(KeyMappings[0][KMAP_AUTO_LEFT] )) MastInput[0]|=0x04;
+      if (DirInputState(KeyMappings[0][KMAP_AUTO_RIGHT])) MastInput[0]|=0x08;
+      if (DirInputState(KeyMappings[0][KMAP_AUTO_1]    )) MastInput[0]|=0x10;
+      if (DirInputState(KeyMappings[0][KMAP_AUTO_2]    )) MastInput[0]|=0x20;
+      if (DirInputState(KeyMappings[0][KMAP_AUTO_START])) MastInput[0]|=0x80;
 
-      if (DirInputState(KeyMappings[KMAP_P2_AUTO_UP]   )) MastInput[1]|=0x01;
-      if (DirInputState(KeyMappings[KMAP_P2_AUTO_DOWN] )) MastInput[1]|=0x02;
-      if (DirInputState(KeyMappings[KMAP_P2_AUTO_LEFT] )) MastInput[1]|=0x04;
-      if (DirInputState(KeyMappings[KMAP_P2_AUTO_RIGHT])) MastInput[1]|=0x08;
-      if (DirInputState(KeyMappings[KMAP_P2_AUTO_1]    )) MastInput[1]|=0x10;
-      if (DirInputState(KeyMappings[KMAP_P2_AUTO_2]    )) MastInput[1]|=0x20;
+      if (DirInputState(KeyMappings[0][KMAP_P2_AUTO_UP]   )) MastInput[1]|=0x01;
+      if (DirInputState(KeyMappings[0][KMAP_P2_AUTO_DOWN] )) MastInput[1]|=0x02;
+      if (DirInputState(KeyMappings[0][KMAP_P2_AUTO_LEFT] )) MastInput[1]|=0x04;
+      if (DirInputState(KeyMappings[0][KMAP_P2_AUTO_RIGHT])) MastInput[1]|=0x08;
+      if (DirInputState(KeyMappings[0][KMAP_P2_AUTO_1]    )) MastInput[1]|=0x10;
+      if (DirInputState(KeyMappings[0][KMAP_P2_AUTO_2]    )) MastInput[1]|=0x20;
     }
 
     MastInput[0]|=AutoHold[0];

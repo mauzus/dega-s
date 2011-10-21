@@ -215,7 +215,11 @@ void VideoPlayback();
 void VideoProperties();
 
 // keymap.cpp
-extern unsigned short KeyMappings[KMAPCOUNT];
+#define KMODIFIERCOUNT    4
+extern unsigned short KeyMappings[KMODIFIERCOUNT][KMAPCOUNT];
+extern unsigned short ModifierKeys[KMODIFIERCOUNT];
+extern int HeldModifierKeys[KMODIFIERCOUNT];
+void CheckModifierKeys();
 void KeyMapping();
 
 // python.cpp

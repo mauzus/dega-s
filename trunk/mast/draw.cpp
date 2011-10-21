@@ -223,3 +223,12 @@ void MdrawDo()
 
   MdrawCall();
 }
+
+// Redraw the whole screen
+void MdrawRefresh()
+{
+  for (int y=0;y<192;y++) {
+    Mdraw.Line=y;
+    MdrawDo();
+  }
+}

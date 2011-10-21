@@ -9,6 +9,11 @@
 #define IDD_HOTKEYMAP                   105
 #define IDD_RECORD_INFO                 106
 #define IDD_PLAYBACK_INFO               107
+#define IDC_HOTKEYMAP_PAGES             301
+#define IDD_HOTKEYMAPPAGE_START         401
+#define IDD_HOTKEYMAPPAGE(x)            (IDD_HOTKEYMAPPAGE_START+(x))
+#define IDS_HKMP_TITLE_START            501
+#define IDS_HKMP_TITLE(x)               (IDS_HKMP_TITLE_START+(x))
 
 #define IDT_MP_FRAMECOUNT               1001
 #define IDT_MP_RERECORDCOUNT            1002
