@@ -136,8 +136,3 @@ void MastSoundUpdate()
   Now=FrameCyc+CpuMid();
   MsndTo(Now*MsndLen/TotalCyc);
 }
-
-void MastScreenUpdate()
-{
-  for (MastY=0;MastY<192;MastY++) { Mdraw.Line=MastY; MdrawDo(); RunLine(); }
-}

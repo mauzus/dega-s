@@ -115,12 +115,15 @@ int InplaceConvert(int (*ConvertFn)(FILE *, FILE *), char *filename) {
 	if (fdtmp == 0) {
 		perror("fopen");
 		free(filenametmp);
+		fclose(fd);
 		return 0;
 	}
 
 	rv = ConvertFn(fd, fdtmp);
 	if (rv == 0) {
 		free(filenametmp);
+		fclose(fd);
+		fclose(fdtmp);
 		return 0;
 	}
 

@@ -4,6 +4,12 @@
 int MastAcbNull (struct MastArea *pba) { (void)pba; return 0; }
 int (*MastAcb) (struct MastArea *pma)=MastAcbNull; // Area callback
 
+int MastSeekcbNull(long int offset, int origin) { (void)offset; (void)origin; return 0; }
+int (*MastSeekcb)(long int offset, int origin)=MastSeekcbNull;
+
+long int MastTellcbNull() { return 0; }
+long int (*MastTellcb)()=MastTellcbNull;
+
 // Scan the information stored in non-volatile memory
 int MastAreaBattery()
 {
@@ -17,18 +23,52 @@ int MastAreaBattery()
   return 0;
 }
 
+int MastAreaSramIncluded()
+{
+  struct MastArea ma;
+  int FileVer=MastVer;
+
+  long int original=MastTellcb();
+  MastSeekcb(0x0004, SEEK_SET);	// magic number
+  memset(&ma,0,sizeof(ma));
+  ma.Data=&FileVer;ma.Len=sizeof(FileVer);MastAcb(&ma); // 0x0008: Frame count
+  MastSeekcb(original, SEEK_SET);
+  return (FileVer&MAST_VERSION_MASK) >= 0x10 ? 1: 0;
+}
+
+int MastAreaMvidFrameCount()
+{
+  struct MastArea ma;
+  int frameDataLen=0;
+
+  long int original=MastTellcb();
+  MastSeekcb(0x0008, SEEK_SET);	// magic number
+  memset(&ma,0,sizeof(ma));
+  ma.Data=&frameDataLen;ma.Len=sizeof(frameDataLen);MastAcb(&ma); // 0x0008: Frame count
+  MastSeekcb(original, SEEK_SET);
+
+  return frameDataLen;
+}
+
+int MastAreaMvidOffset()
+{
+  return 0x6200 + (MastAreaSramIncluded() ? 0x4000 : 0) + sizeof(MastInput);
+}
+
 // Scan the information stored in volatile memory
 // Dega state style
 int MastAreaDega()
 {
+  if (pMastb==NULL) return 1;
   struct MastArea ma;
   unsigned char Blank[sizeof(pMastb->Sram)];
   unsigned int FileVer=0;
   unsigned int MastFlags=0, FileFlags=0;
-  if (pMastb==NULL) return 1;
 
   memset(&ma,0,sizeof(ma));
-  memset(Blank,0,sizeof(Blank));
+  memset(&Blank,0,sizeof(Blank));
+
+  MastSeekcb(0x0000, SEEK_SET);	// magic number
 
   // 0x0000 File ID
   {
@@ -39,9 +79,9 @@ int MastAreaDega()
 
   FileVer=MastVer;
   ma.Data=&FileVer; ma.Len=sizeof(FileVer); MastAcb(&ma); // 0x0004: Version number
-  if (MastVer&MAST_CORE_MASK != FileVer&MAST_CORE_MASK) return 1; // verify that the same Z80 core was used
+  if ((MastVer&MAST_CORE_MASK) != (FileVer&MAST_CORE_MASK)) return 1; // verify that the same Z80 core was used
 
-  ma.Data=&frameCount;ma.Len=sizeof(frameCount);MastAcb(&ma); // 0x0008: Frame count
+  ma.Data=&frameCount; ma.Len=sizeof(frameCount); MastAcb(&ma); // 0x0008: Frame count
 
   if (MastEx&MX_SRAM)
     MastFlags |= SFLAG_SRAM;
@@ -62,18 +102,25 @@ int MastAreaDega()
   // 0x0080: pMastb
   ma.Data=pMastb->Ram; ma.Len=sizeof(*pMastb)-0x4000; // Exclude sram
   MastAcb(&ma);
+
+  // 0x6104
   ma.Data=Blank;    ma.Len=0x100-0x04;      MastAcb(&ma); // reserved
 
-  if (FileVer&MAST_VERSION_MASK >= 0x1160)
+  // 0x6200
+  if ((FileVer&MAST_VERSION_MASK) >= 0x10)
   {
-    if (MastEx&MX_SRAM && FileFlags&SFLAG_SRAM)
+    // + 0x4000
+    if ((MastEx&MX_SRAM) && (FileFlags&SFLAG_SRAM)) {
       ma.Data=pMastb->Sram;
-    else
-      ma.Data=Blank;
-    ma.Len=sizeof(pMastb->Sram);
-    MastAcb(&ma);
+      ma.Len=sizeof(pMastb->Sram);
+      MastAcb(&ma);
+    }
+    else {
+      MastSeekcb(sizeof(pMastb->Sram), SEEK_CUR);
+    }
   }
 
+  // + 0x2
   ma.Len = sizeof(MastInput);
   ma.Data = MastInput;
   MastAcb(&ma);

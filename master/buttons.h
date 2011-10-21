@@ -79,8 +79,14 @@
 #define ID_LAB_KMAP_START 42000
 #define ID_LAB_KMAP(kmap) ((kmap) + ID_LAB_KMAP_START)
 
+#define KMAP_DIALOG_RES_STACKED(label, kmap, x, y) \
+  LTEXT label, 0, x, y+3, 45, 10 \
+  PUSHBUTTON "Set", ID_KMAP(kmap), x+45, y, 20, 15 \
+  PUSHBUTTON "Clear", ID_CLEAR_KMAP(kmap), x+70, y, 20, 15 \
+  CTEXT "", ID_LAB_KMAP(kmap), x, y+23, 120, 10, SS_NOPREFIX | SS_SUNKEN
+
 #define KMAP_DIALOG_RES(label, kmap, x, y) \
   LTEXT label, 0, x, y+3, 45, 10 \
   PUSHBUTTON "Set", ID_KMAP(kmap), x+45, y, 20, 15 \
   PUSHBUTTON "Clear", ID_CLEAR_KMAP(kmap), x+70, y, 20, 15 \
-  LTEXT "", ID_LAB_KMAP(kmap), x+100, y+3, 20, 10
+  CTEXT "", ID_LAB_KMAP(kmap), x+100, y+1, 110, 10, SS_NOPREFIX | SS_SUNKEN

@@ -128,7 +128,7 @@ static int RunIdle()
   static int SkipCount=0;
 #endif
 
-  if (GetActiveWindow()==hFrameWnd && GetAsyncKeyState(KeyMappings[KMAP_FASTFORWARD])&0x8000)
+  if (GetActiveWindow()==hFrameWnd && GetAsyncKeyState(KeyMappings[0][KMAP_FASTFORWARD])&0x8000)
   {
     // Fast forward
     int i=0; for (i=0;i<5;i++) RunFrame(0,NULL);

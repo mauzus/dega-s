@@ -56,15 +56,22 @@ int MsndExit();
 
 // frame.cpp
 int MastFrame();
-void MastScreenUpdate();
 
 // area.cpp
 struct MastArea { void *Data; int Len; };
 extern int MastAcbNull (struct MastArea *pba);
 extern int (*MastAcb) (struct MastArea *pma); // Area callback
+extern int MastSeekcbNull(long int offset, int origin);
+extern int (*MastSeekcb)(long int offset, int origin);
+extern long int MastTellcbNull();
+extern long int (*MastTellcb)();
+
 int MastAreaBattery();
 int MastAreaMeka();
 int MastAreaDega();
+int MastAreaSramIncluded();
+int MastAreaMvidOffset();
+int MastAreaMvidFrameCount();
 
 // load.cpp
 int MastLoadRom(char *Name,unsigned char **pRom,int *pRomLen);
@@ -81,6 +88,7 @@ struct Mdraw
 };
 extern struct Mdraw Mdraw;
 void MdrawCall();
+void MdrawRefresh();
 
 // samp.cpp
 extern int DpsgEnhance;
@@ -113,8 +121,10 @@ struct MvidHeader {
 int MvidReadHeader(FILE *file, struct MvidHeader *header);
 int MvidStart(char *videoFilename, int mode, int reset, char *author);
 void MvidStop();
+int MvidPreLoadState(int readonly);
 void MvidPostLoadState(int readonly);
 void MvidPostSaveState();
+void MvidPostHardReset();
 int MvidSetAuthor(char *author);
 void MvidGetAuthor(char *author, int len);
 int MvidGetFrameCount();
