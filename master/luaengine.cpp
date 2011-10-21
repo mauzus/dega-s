@@ -51,11 +51,12 @@ static lua_State *LUA;
 // Screen
 //if (MastEx&MX_GG) { ScrnWidth=160; ScrnHeight=144; } // Game gear
 //else              { ScrnWidth=256; ScrnHeight=192; } // Master System
+//int ScrnWidth=256,ScrnHeight=192;
 static UINT8 *XBuf;
 static int iScreenBpp    = 4;
-static int iScreenPitch  = 1024;
-static int LUA_SCREEN_WIDTH  = 320;
-static int LUA_SCREEN_HEIGHT = 240;
+static int iScreenPitch  = 640;
+static int LUA_SCREEN_WIDTH  = 256;
+static int LUA_SCREEN_HEIGHT = 192;
 static int old_screen_width = 0;
 static int old_screen_height = 0;
 
@@ -123,8 +124,6 @@ static const char* toCString(lua_State* L, int idx=0);
 static int usingMemoryRegister=0;
 
 static std::string empty_driver("empty");
-static bool is_init = false;
-static bool run_it_once = false;
 
 /**
  * Resets emulator speed / pause states after script exit.
@@ -134,6 +133,7 @@ static void DEGA_LuaOnStop() {
 	luaRunning = FALSE;
 	lua_joypads_used = 0;
 	gui_used = GUI_CLEAR;
+	DispDraw();
 }
 
 
@@ -3320,9 +3320,8 @@ void DEGA_LuaFrameBoundary() {
 	int result;
 
 	// HA!
-	if (!LUA || !luaRunning || (LoopPause && !run_it_once))
+	if (!LUA || !luaRunning)
 		return;
-	run_it_once = false;
 
 	// Our function needs calling
 	lua_settop(LUA,0);
@@ -3488,9 +3487,8 @@ int DEGA_LoadLuaCode(const char *filename) {
 		info_onstart(info_uid);
 
 	// And run it right now. :)
-	run_it_once = true; // run it now, even if it's paused
-	if (is_init) // but we can't run it before init time
-		DEGA_LuaFrameBoundary();
+	DEGA_LuaFrameBoundary();
+	DispDraw();
 
 	// Set up our protection hook to be executed once every 10,000 bytecode instructions.
 	lua_sethook(thread, DEGA_LuaHookFunction, LUA_MASKCOUNT, 10000);
@@ -3620,9 +3618,24 @@ int DEGA_LuaRerecordCountSkip() {
 	return LUA && luaRunning && skipRerecords;
 }
 
-void DEGA_LuaGui() {
+void DEGA_LuaGui(unsigned char *s, int width, int height, int bpp, int pitch) {
+	XBuf = s;
+
+	iScreenBpp    = bpp;
+	iScreenPitch  = pitch;
+
+	LUA_SCREEN_WIDTH  = width;
+	LUA_SCREEN_HEIGHT = height;
+
+//	if (!LUA || !bDrvOkay/* || !luaRunning*/)
 	if (!LUA)
 		return;
+
+//	char msg[40];
+//	snprintf(msg, sizeof(msg), "x:%d y:%d d:%d p:%d\n",width,height,bpp,pitch);
+//	RunText(msg, 2*60);
+//	int uid = info_uid;
+//	info_print(uid, msg);
 
 	// First, check if we're being called by anybody
 	lua_getfield(LUA, LUA_REGISTRYINDEX, guiCallbackTable);
@@ -3635,78 +3648,10 @@ void DEGA_LuaGui() {
 		ret = lua_pcall(LUA, 0, 0, 0);
 		if (ret != 0) {
 #ifdef WIN32
-			MessageBoxA(hFrameWnd, lua_tostring(LUA, -1), "Lua Error in GUI function", MB_OK);
+			MessageBox(hFrameWnd, lua_tostring(LUA, -1), "Lua Error in GUI function", MB_OK);
 #else
-			dega_printf_info("Lua error in gui.register function: %s\n", lua_tostring(LUA, -1));
+			fprintf(stderr, "Lua error in gui.register function: %s\n", lua_tostring(LUA, -1));
 #endif
-
-			// This is grounds for trashing the function
-			lua_pushnil(LUA);
-			lua_setfield(LUA, LUA_REGISTRYINDEX, guiCallbackTable);
-		}
-	}
-
-	// And wreak the stack
-	lua_settop(LUA, 0);
-
-	if (gui_used == GUI_CLEAR || !gui_enabled)
-		return;
-
-	gui_used = GUI_USED_SINCE_LAST_FRAME;
-
-//	render_screen_add_quad(machine->primary_screen, // TODO
-//	                       0.0f, 0.0f,
-//	                       1.0f, 1.0f,
-//	                       MAKE_ARGB(0xff, 0xff, 0xff, 0xff),
-//	                       gui_texture, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
-}
-
-/**
- * Given an 8-bit screen with the indicated resolution,
- * draw the current GUI onto it.
- */
-/*void DEGA_LuaGui(bitmap_t *bitmap) {
-//	int x,y;
-//	for (y=0; y < 50; y++) {
-//		for (x=0; x < 50; x++) {
-//			*BITMAP_ADDR32(bitmap, y, x) = MAKE_ARGB(200, 255, 0, 0);
-//		}
-//	}
-
-	XBuf = (UINT8 *)BITMAP_ADDR8(bitmap,0,0);
-
-//video_screen_get_width(machine->primary_screen)
-//video_screen_get_height(machine->primary_screen)
-//video_screen_get_visible_area(machine->primary_screen)
-
-	int width, height, bpp, pitch;
-
-	width  = LUA_SCREEN_WIDTH;
-	height = LUA_SCREEN_HEIGHT;
-	bpp    = bitmap->format;
-	pitch  = 0;
-
-	if (!LUA)
-		return;
-
-//	dega_printf_info("*LUA GUI START*: x:%d y:%d d:%d p:%d\n",width,height,bpp,pitch);
-
-	// First, check if we're being called by anybody
-	lua_getfield(LUA, LUA_REGISTRYINDEX, guiCallbackTable);
-	
-	if (lua_isfunction(LUA, -1)) {
-		int ret;
-
-		// We call it now
-		numTries = 1000;
-		ret = lua_pcall(LUA, 0, 0, 0);
-		if (ret != 0) {
-#ifdef WIN32
-			MessageBoxA(hFrameWnd, lua_tostring(LUA, -1), "Lua Error in GUI function", MB_OK);
-#else
-			dega_printf_info("Lua error in gui.register function: %s\n", lua_tostring(LUA, -1));
-#endif
-
 			// This is grounds for trashing the function
 			lua_pushnil(LUA);
 			lua_setfield(LUA, LUA_REGISTRYINDEX, guiCallbackTable);
@@ -3725,13 +3670,11 @@ void DEGA_LuaGui() {
 
 	switch(bpp)
 	{
-	case BITMAP_FORMAT_INDEXED16:
+	case 2:
 	 {
-//		dega_printf_info("*LUA GUI*: BITMAP_FORMAT_INDEXED16\n");
-		const rgb_t *palette = palette_entry_list_adjusted(machine->palette);
-
+		UINT16 *screen = (UINT16*) s;
+		int ppl = pitch/2;
 		for (y=0; y < height && y < LUA_SCREEN_HEIGHT; y++) {
-			UINT16 *screen = BITMAP_ADDR16(bitmap, y, 0);
 			for (x=0; x < LUA_SCREEN_WIDTH; x++) {
 				const UINT8 gui_alpha = gui_data[(y*LUA_SCREEN_WIDTH+x)*4+3];
 				if (gui_alpha == 0) {
@@ -3752,24 +3695,23 @@ void DEGA_LuaGui() {
 				}
 				else {
 					// alpha-blending
-					rgb_t pixel = palette[screen[x]];
-					const UINT8 scr_red   = RGB_RED(pixel);
-					const UINT8 scr_green = RGB_GREEN(pixel);
-					const UINT8 scr_blue  = RGB_BLUE(pixel);
+					const UINT8 scr_red   = ((screen[y*ppl + x] >> 11) & 31) << 3;
+					const UINT8 scr_green = ((screen[y*ppl + x] >> 5)  & 63) << 2;
+					const UINT8 scr_blue  = ( screen[y*ppl + x]        & 31) << 3;
 					red   = (((int) gui_red   - scr_red)   * gui_alpha / 255 + scr_red)   & 255;
 					green = (((int) gui_green - scr_green) * gui_alpha / 255 + scr_green) & 255;
 					blue  = (((int) gui_blue  - scr_blue)  * gui_alpha / 255 + scr_blue)  & 255;
 				}
-				screen[x] = RGB_BLUE(blue) + RGB_GREEN(green) + RGB_RED(red);
+				screen[y*ppl + x] =  ((red >> 3) << 11) | ((green >> 2) << 5) | (blue >> 3);
 			}
 		}
 		break;
 	 }
-	case BITMAP_FORMAT_RGB32:
+	case 3:
 	 {
-//		dega_printf_info("*LUA GUI*: BITMAP_FORMAT_RGB32\n");
+		#define bytesPerPixel   3
+		UINT8 *screen = (UINT8*) s;
 		for (y=0; y < height && y < LUA_SCREEN_HEIGHT; y++) {
-			UINT32 *screen = BITMAP_ADDR32(bitmap, y, 0);
 			for (x=0; x < LUA_SCREEN_WIDTH; x++) {
 				const UINT8 gui_alpha = gui_data[(y*LUA_SCREEN_WIDTH+x)*4+3];
 				if (gui_alpha == 0) {
@@ -3790,23 +3732,67 @@ void DEGA_LuaGui() {
 				}
 				else {
 					// alpha-blending
-					const UINT8 scr_red   = RGB_RED(screen[x]);
-					const UINT8 scr_green = RGB_GREEN(screen[x]);
-					const UINT8 scr_blue  = RGB_BLUE(screen[x]);
+					const UINT8 scr_red   = screen[y*pitch + x*bytesPerPixel + 2];
+					const UINT8 scr_green = screen[y*pitch + x*bytesPerPixel + 1];
+					const UINT8 scr_blue  = screen[y*pitch + x*bytesPerPixel];
 					red   = (((int) gui_red   - scr_red)   * gui_alpha / 255 + scr_red)   & 255;
 					green = (((int) gui_green - scr_green) * gui_alpha / 255 + scr_green) & 255;
 					blue  = (((int) gui_blue  - scr_blue)  * gui_alpha / 255 + scr_blue)  & 255;
 				}
-				screen[x] = MAKE_RGB(red,green,blue);
+				screen[y*pitch + x*bytesPerPixel] = blue;
+				screen[y*pitch + x*bytesPerPixel + 1] = green;
+				screen[y*pitch + x*bytesPerPixel + 2] = red;
 			}
 		}
+		#undef bytesPerPixel
+		break;
+	 }
+	case 4:
+	 {
+		#define bytesPerPixel   4
+		UINT8 *screen = (UINT8*) s;
+		for (y=0; y < LUA_SCREEN_HEIGHT; y++) {
+			for (x=0; x < LUA_SCREEN_WIDTH; x++) {
+				const UINT8 gui_alpha = gui_data[(y*LUA_SCREEN_WIDTH+x)*4+3];
+				if (gui_alpha == 0) {
+					// do nothing
+					continue;
+				}
+
+				const UINT8 gui_red   = gui_data[(y*LUA_SCREEN_WIDTH+x)*4+2];
+				const UINT8 gui_green = gui_data[(y*LUA_SCREEN_WIDTH+x)*4+1];
+				const UINT8 gui_blue  = gui_data[(y*LUA_SCREEN_WIDTH+x)*4];
+				int red, green, blue;
+
+				if (gui_alpha == 255) {
+					// direct copy
+					red = gui_red;
+					green = gui_green;
+					blue = gui_blue;
+				}
+				else {
+					// alpha-blending
+					const UINT8 scr_red   = screen[y*pitch + x*bytesPerPixel + 2];
+					const UINT8 scr_green = screen[y*pitch + x*bytesPerPixel + 1];
+					const UINT8 scr_blue  = screen[y*pitch + x*bytesPerPixel];
+					red   = (((int) gui_red   - scr_red)   * gui_alpha / 255 + scr_red)   & 255;
+					green = (((int) gui_green - scr_green) * gui_alpha / 255 + scr_green) & 255;
+					blue  = (((int) gui_blue  - scr_blue)  * gui_alpha / 255 + scr_blue)  & 255;
+				}
+
+				screen[y*pitch + x*bytesPerPixel] = blue;
+				screen[y*pitch + x*bytesPerPixel + 1] = green;
+				screen[y*pitch + x*bytesPerPixel + 2] = red;
+			}
+		}
+		#undef bytesPerPixel
 		break;
 	 }
 	default:
-		assert(false);
+		assert(false /* unsupported color-depth */);
 	}
 	return;
-}*/
+}
 
 void DEGA_LuaClearGui() {
 	gui_used = GUI_CLEAR;
