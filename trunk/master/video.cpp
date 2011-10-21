@@ -100,8 +100,13 @@ static UINT_PTR CALLBACK MenuVideoPlaybackHook(HWND hdlg, UINT uiMsg, WPARAM wPa
 
 UINT_PTR CALLBACK MenuVideoRecordHook(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam)
 {
-  switch (uiMsg) {
-  	case WM_COMMAND:
+	switch (uiMsg) {
+	case WM_INITDIALOG:
+	{
+		SendDlgItemMessage(hdlg, IDT_RI_RESET, BM_SETCHECK, VideoReset?BST_CHECKED:BST_UNCHECKED, 0);
+		break;
+	}
+	case WM_COMMAND:
 	{
 		int cmd = wParam&0xffff;
 		switch (cmd) {
@@ -141,7 +146,7 @@ UINT_PTR CALLBACK MenuVideoRecordHook(HWND hdlg, UINT uiMsg, WPARAM wParam, LPAR
 int MenuVideo(int Action)
 {
   char Name[256];
-  OPENFILENAME Ofn; int Ret=0; VideoReset=0;
+  OPENFILENAME Ofn; int Ret=0; VideoReset=1;
 
   SetCurrentDirectory(StateFolder); // Point to the state folder
 
@@ -157,7 +162,7 @@ int MenuVideo(int Action)
   Ofn.lpstrFile=Name;
   Ofn.nMaxFile=sizeof(Name);
   Ofn.lpstrInitialDir=".";
-  Ofn.Flags=OFN_OVERWRITEPROMPT|OFN_ENABLEHOOK|OFN_ENABLETEMPLATE|OFN_EXPLORER;
+  Ofn.Flags=OFN_OVERWRITEPROMPT|OFN_ENABLEHOOK|OFN_ENABLETEMPLATE|OFN_EXPLORER|OFN_READONLY;
   Ofn.lpstrDefExt="mmv";
 
   switch (Action)
