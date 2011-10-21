@@ -57,6 +57,25 @@ static unsigned char CharStart[CHARHEIGHT][CHARWIDTH] = {
 { 0, 0, 1, 0, 0, 0, 0 }
 };
 
+static unsigned char CharRecord[CHARHEIGHT][CHARWIDTH] = {
+{ 0, 0, 0, 0, 0, 0, 0 },
+{ 0, 0, 2, 2, 2, 0, 0 },
+{ 0, 2, 2, 2, 2, 2, 0 },
+{ 0, 2, 2, 2, 2, 2, 1 },
+{ 0, 2, 2, 2, 2, 2, 1 },
+{ 0, 0, 2, 2, 2, 1, 0 },
+{ 0, 0, 1, 1, 1, 0, 0 }
+};
+static unsigned char CharPlayback[CHARHEIGHT][CHARWIDTH] = {
+{ 0, 0, 2, 0, 0, 0, 0 },
+{ 0, 0, 2, 2, 0, 0, 0 },
+{ 0, 0, 2, 2, 2, 1, 0 },
+{ 0, 0, 2, 2, 2, 1, 0 },
+{ 0, 0, 2, 2, 1, 0, 0 },
+{ 0, 0, 2, 1, 0, 0, 0 },
+{ 0, 0, 1, 0, 0, 0, 0 }
+};
+
 static unsigned char CharNumbers[10][CHARHEIGHT][CHARWIDTH] = {
 {
 { 0, 0, 2, 2, 0, 0, 0 },
@@ -178,6 +197,7 @@ void MdrawOsd() {
 	char *frameptr;
 	int x;
 	int xlef = MastEx&MX_GG?64:16, ybot = MastEx&MX_GG?168:192;
+	int xrig = MastEx&MX_GG?220:268, ydif = MastEx&MX_GG?140:188;
 
 	if (MdrawOsdOptions&OSD_BUTTONS) {
 		if (MastInput[0]&0x01) MdrawOsdChar(CharUp, xlef+20, ybot-40);
@@ -195,6 +215,10 @@ void MdrawOsd() {
 			MdrawOsdChar(CharNumbers[*frameptr - '0'], x, ybot-CHARHEIGHT-1);
 		}
 	}
+	if (MdrawOsdOptions&OSD_FRAMECOUNT && MvidInVideoRecord())
+		MdrawOsdChar(CharRecord, xrig-8, ybot-ydif);
+	if (MdrawOsdOptions&OSD_FRAMECOUNT && MvidInVideoPlayback())
+		MdrawOsdChar(CharPlayback, xrig-8, ybot-ydif);
 }
 
 

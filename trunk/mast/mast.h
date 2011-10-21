@@ -121,6 +121,8 @@ int MvidGetFrameCount();
 int MvidGetRerecordCount();
 int MvidGotProperties();
 int MvidInVideo();
+int MvidInVideoPlayback();
+int MvidInVideoRecord();
 // defined by implementation
 void MvidModeChanged();
 void MvidMovieStopped();

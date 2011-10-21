@@ -1179,9 +1179,9 @@ int movie_framecount(lua_State *L) {
 //
 //   "record", "playback" or nil
 int movie_mode(lua_State *L) {
-	if (MvidInVideo()) // TODO
+	if (MvidInVideoRecord())
 		lua_pushstring(L, "record");
-	else if (MvidInVideo())
+	else if (MvidInVideoPlayback())
 		lua_pushstring(L, "playback");
 	else
 		lua_pushnil(L);
@@ -2796,11 +2796,11 @@ const char* s_keyToName[256] =
 
 void GetMouseData(UINT32 *md)
 {
-//	extern UINT32 mousex,mousey; // TODO
-//	RECT t;
-//	GetClientRect(hFrameWnd, &t);
-//	md[0] = (UINT32)(mousex / ((float)t.right / LUA_SCREEN_WIDTH));
-//	md[1] = (UINT32)(mousey / ((float)t.bottom / LUA_SCREEN_HEIGHT));
+	extern UINT32 mousex,mousey;
+	RECT t;
+	GetClientRect(hFrameWnd, &t);
+	md[0] = (UINT32)(mousex / ((float)t.right / LUA_SCREEN_WIDTH));
+	md[1] = (UINT32)(mousey / ((float)t.bottom / LUA_SCREEN_HEIGHT));
 }
 
 #endif
