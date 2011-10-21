@@ -36,6 +36,9 @@ void RunPostChangeStatus()
 int RunFrame(int Draw,short *pSound)
 {
   if (!NoInput) InputGet();
+	if(DEGA_LuaUsingJoypad(0)) MastInput[0] = DEGA_LuaReadJoypad(0);
+	if(DEGA_LuaUsingJoypad(1)) MastInput[1] = DEGA_LuaReadJoypad(1);
+
   MastDrawDo=Draw; pMsndOut=pSound;
 
   CallRegisteredLuaFunctions(LUACALL_BEFOREEMULATION); //TODO: find proper place
