@@ -241,6 +241,18 @@ int MvidGotProperties() {
 int MvidInVideo() {
 	return (videoFile != 0);
 }
+int MvidInVideoPlayback() {
+	if (videoFile != NULL)
+		return (videoMode == PLAYBACK_MODE);
+	else
+		return 0;
+}
+int MvidInVideoRecord() {
+	if (videoFile != NULL)
+		return (videoMode == RECORD_MODE);
+	else
+		return 0;
+}
 
 void MvidPreFrame() {
 	int result;

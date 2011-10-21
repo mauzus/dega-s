@@ -6,6 +6,8 @@ HMENU hFrameMenu=NULL;
 HWND hFrameStatus=NULL; // Frame - status window
 DWORD MoveOK=0;
 
+UINT32 mousex,mousey;
+
 // The window procedure
 static LRESULT CALLBACK WindowProc(HWND hWnd,UINT Msg,WPARAM wParam,LPARAM lParam)
 {
@@ -40,6 +42,13 @@ static LRESULT CALLBACK WindowProc(HWND hWnd,UINT Msg,WPARAM wParam,LPARAM lPara
 
   if (Msg==WM_KEYDOWN && wParam==VK_ESCAPE) { PostMessage(NULL,WMU_TOGGLEMENU,0,0); return 0; }
   if (Msg==WM_RBUTTONDOWN)                  { PostMessage(NULL,WMU_TOGGLEMENU,0,0); return 0; }
+
+  if (Msg==WM_MOUSEMOVE)
+  {
+    mousex=LOWORD(lParam);
+    mousey=HIWORD(lParam);
+    return TRUE;
+  }
 
   if (Msg==WM_COMMAND)
   {
