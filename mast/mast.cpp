@@ -8,7 +8,7 @@
 #define MAST_CORE MAST_CORE_Z80JB
 #endif
 
-unsigned int MastVer=0x10 | MAST_CORE; // Version number of the library (lower 16 bits) and Z80 core (upper 16 bits)
+unsigned int MastVer=0x20 | MAST_CORE; // Version number of the library (lower 16 bits) and Z80 core (upper 16 bits)
 
 unsigned char MastInput[2]={0,0}; // Joypads
 unsigned int MastEx=0; // Extra options
