@@ -140,7 +140,9 @@ int MastReset()
   Z80.sp.w.l=0xdff0; // bios sets
 #endif
 
-  MdrawRefresh();
+  if (Mastz.Rom != NULL)
+    MdrawRefresh();
+
   return 0;
 }
 

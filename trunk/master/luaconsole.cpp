@@ -55,7 +55,7 @@ void PrintToWindowConsole(int hDlgAsInt, const char* str)
 	//LuaPerWindowInfo& info = LuaWindowInfo[hDlg];
 
 	{
-		SendMessageA(hConsole, EM_REPLACESEL, false, (LPARAM)str);
+		SendMessage(hConsole, EM_REPLACESEL, false, (LPARAM)str);
 	}
 }
 
@@ -66,8 +66,8 @@ void WinLuaOnStart(int hDlgAsInt)
 	//info.started = true;
 	EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_LUABROWSE), false); // disable browse while running because it misbehaves if clicked in a frameadvance loop
 	EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_LUASTOP), true);
-	SetWindowTextA(GetDlgItem(hDlg, IDC_BUTTON_LUARUN), "Restart");
-	SetWindowTextA(GetDlgItem(hDlg, IDC_LUACONSOLE), ""); // clear the console
+	SetWindowText(GetDlgItem(hDlg, IDC_BUTTON_LUARUN), "Restart");
+	SetWindowText(GetDlgItem(hDlg, IDC_LUACONSOLE), ""); // clear the console
 //	Show_Genesis_Screen(HWnd); // otherwise we might never show the first thing the script draws
 }
 
@@ -83,7 +83,7 @@ void WinLuaOnStop(int hDlgAsInt)
 	//info.started = false;
 	EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_LUABROWSE), true);
 	EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_LUASTOP), false);
-	SetWindowTextA(GetDlgItem(hDlg, IDC_BUTTON_LUARUN), "Run");
+	SetWindowText(GetDlgItem(hDlg, IDC_BUTTON_LUARUN), "Run");
 //	if(statusOK)
 //		Show_Genesis_Screen(MainWindow->getHWnd()); // otherwise we might never show the last thing the script draws
 	//if(info.closeOnStop)
@@ -144,7 +144,7 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 		}
 
 		DragAcceptFiles(hDlg, true);
-		SetDlgItemTextA(hDlg, IDC_EDIT_LUAPATH, DEGA_GetLuaScriptName());
+		SetDlgItemText(hDlg, IDC_EDIT_LUAPATH, DEGA_GetLuaScriptName());
 
 		SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &LuaConsoleLogFont, 0); // reset with an acceptable font
 		return true;
@@ -229,7 +229,7 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 			case IDC_BUTTON_LUARUN:
 			{
 				char filename[MAX_PATH];
-				GetDlgItemTextA(hDlg, IDC_EDIT_LUAPATH, filename, MAX_PATH);
+				GetDlgItemText(hDlg, IDC_EDIT_LUAPATH, filename, MAX_PATH);
 				DEGA_LoadLuaCode(filename);
 			}	break;
 
@@ -275,7 +275,7 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 			case IDC_EDIT_LUAPATH:
 			{
 				char filename[MAX_PATH];
-				GetDlgItemTextA(hDlg, IDC_EDIT_LUAPATH, filename, MAX_PATH);
+				GetDlgItemText(hDlg, IDC_EDIT_LUAPATH, filename, MAX_PATH);
 				FILE* file = fopen(filename, "rb");
 				EnableWindow(GetDlgItem(hDlg, IDOK), file != NULL);
 				if(file)
@@ -304,7 +304,7 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 
 			case IDC_LUACONSOLE_CLEAR:
 			{
-				SetWindowTextA(GetDlgItem(hDlg, IDC_LUACONSOLE), "");
+				SetWindowText(GetDlgItem(hDlg, IDC_LUACONSOLE), "");
 			}	break;
 
 		}

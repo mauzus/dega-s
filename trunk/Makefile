@@ -1,6 +1,11 @@
-OPTFLAGS=-O3 -fomit-frame-pointer -funroll-loops -Wall
-#OPTFLAGS=-O3 -fomit-frame-pointer -funroll-loops -march=i686 -mcpu=i686
-#OPTFLAGS=-xM -O3
+#DEBUG_SYM=1
+
+ifndef DEBUG_SYM
+	OPTFLAGS=-O3 -fomit-frame-pointer -funroll-loops -Wall
+#	OPTFLAGS=-O3 -fomit-frame-pointer -funroll-loops -march=i686 -mcpu=i686
+#	OPTFLAGS=-xM -O3
+	STRIP = strip
+endif
 
 CC=gcc
 #CC=icc
@@ -8,7 +13,6 @@ CXX=g++
 #CXX=icpc
 NASM=nasm
 WINDRES=windres
-STRIP = strip
 
 CCVER = $(shell $(CC) -v 2>&1)
 
@@ -43,6 +47,12 @@ else
 	CFLAGS += -Idoze -DEMU_DOZE
 	Z80OBJ = doze/doze.o doze/dozea.o
 endif
+
+ifdef DEBUG_SYM
+	CFLAGS  += -ggdb
+endif
+#CFLAGS  += -fprofile-generate
+#CFLAGS  += -fprofile-use
 
 CXXFLAGS= $(CFLAGS) -fno-exceptions
 
@@ -130,7 +140,9 @@ endif
 
 dega-s$(EXEEXT): $(PLATOBJ) $(Z80OBJ) $(MASTOBJ) $(SPECS)
 	$(CXX) $(EXTRA_LDFLAGS) $(GUI_LDFLAGS) -o dega-s$(EXEEXT) $(PLATOBJ) $(Z80OBJ) $(MASTOBJ) $(EXTRA_LIBS)
+ifdef STRIP
 	$(STRIP) dega-s$(EXEEXT)
+endif
 
 degavi$(EXEEXT): tools/avioutput.o $(ENCODER_OBJ) $(Z80OBJ) $(MASTOBJ) $(ENCODER_LIBS)
 	$(CC) $(EXTRA_LDFLAGS) -o degavi$(EXEEXT) tools/avioutput.o $(ENCODER_OBJ) $(Z80OBJ) $(MASTOBJ) $(ENCODER_LIBS) $(ENCODER_LDFLAGS)
