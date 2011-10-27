@@ -38,7 +38,7 @@ static int MediaInit(int Level)
     DirInputInit(hAppInst,hFrameWnd); // not critical if it fails
   }
 
-  if (Level<=15) // Mast library and Python
+  if (Level<=15) // Mast library
   {
     Ret=EmuInit(); if (Ret!=0) { AppError("EmuInit Failed",0); return 1; }
 
@@ -46,9 +46,6 @@ static int MediaInit(int Level)
       OpenRWRecentFile(0);
       RamWatchHWnd = CreateDialog(hAppInst, MAKEINTRESOURCE(IDD_RAMWATCH), NULL, (DLGPROC) RamWatchProc);
     }
-
-//    PythonInit();
-//    EnableMenuItem(hFrameMenu, 7, (PythonLoaded ? MF_ENABLED : MF_GRAYED) | MF_BYPOSITION); // XXX hardcoded (7 = Python)
   }
 
   if (Level<=20) // Game load
@@ -140,7 +137,7 @@ static int MediaInit(int Level)
     }
 
     // Start the Run thread
-    if (LoopPause==0 || PythonRunning)
+    if (LoopPause==0)
     {
       RunStart();
       if (LoopPause==0) DSoundPlay();
@@ -239,7 +236,6 @@ static int MediaExit(int Level)
   if (Level<=15)
   {
     VgmStop(NULL);
-    PythonExit();
     EmuExit();
   }
 
@@ -468,8 +464,6 @@ int LoopDo()
 
     if (Msg.message==WMU_VIDEORECORD)      { VideoRecord(); }
     if (Msg.message==WMU_VIDEOPLAYBACK)    { VideoPlayback(); }
-    if (Msg.message==WMU_PYTHON) { PythonRunning=1; }
-    if (Msg.message==WMU_PYTHON_THREAD) { PythonRunThread(); }
 
     Ret=MediaInit(InitLevel); if (Ret!=0) { InitLevel=0; goto Error; }
 
@@ -552,8 +546,6 @@ MainLoop:
 
       if (Msg.message==WMU_VIDEORECORD)      { InitLevel=60; break; }
       if (Msg.message==WMU_VIDEOPLAYBACK)    { InitLevel=50; break; }
-      if (Msg.message==WMU_PYTHON)           { InitLevel=60; break; }
-      if (Msg.message==WMU_PYTHON_THREAD)    { InitLevel=70; break; }
       if (Msg.message==WMU_SIZE)             { InitLevel=70; break; }
 
       if (hAccel!=NULL) TranslateAccelerator(hFrameWnd,hAccel,&Msg);
@@ -563,16 +555,11 @@ MainLoop:
     }
 
   Error:
-    if (InitLevel<=60 && PythonRunning) {
-       MessageBox(hFrameWnd, "You cannot perform this action because a Python script is running.", "Error", MB_OK | MB_ICONERROR);
-       goto MainLoop;
-    } else {
-      if (InitLevel<=0) MoveOK = timeGetTime();
-      // Exit everything
-      MediaExit(InitLevel);
+    if (InitLevel<=0) MoveOK = timeGetTime();
+    // Exit everything
+    MediaExit(InitLevel);
 
-      if (InitLevel<=0) break; // Quit program
-    }
+    if (InitLevel<=0) break; // Quit program
   }
   return 0;
 }

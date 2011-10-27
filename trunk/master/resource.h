@@ -170,9 +170,6 @@
 #define ID_INPUT_P2_HOLD_DOWN           40110
 #define ID_INPUT_P2_HOLD_LEFT           40111
 #define ID_INPUT_P2_HOLD_RIGHT          40112
-#define ID_PYTHON_MEMORY                40113
-#define ID_PYTHON_LOAD                  40114
-#define ID_PYTHON_LOAD_THREAD           40115
 #define ID_SETUP_SCALE_1X               40116
 #define ID_SETUP_SCALE_2X               40117
 #define ID_SETUP_SCALE_3X               40118
