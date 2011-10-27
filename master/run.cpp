@@ -59,8 +59,6 @@ int RunFrame(int Draw,short *pSound)
 
   if (Draw) DispDraw();
 
-  PythonPostFrame();
-
   Update_RAM_Search();
   DEGA_LuaFrameBoundary();
   CallRegisteredLuaFunctions(LUACALL_AFTEREMULATION); //TODO: find proper place
@@ -188,11 +186,6 @@ static DWORD WINAPI RunThreadProc(void *pParam)
   LastSecond=timeGetTime(); FramesDone=0; // Remember start time
   DSoundGetNextSound=FrameWithSound; // Use our callback to make sound
 
-  if (PythonRunning)
-  {
-    PythonRun();
-  }
-
   if (LoopPause==0)
   {
     for (;;)
@@ -241,11 +234,6 @@ int RunStart()
 int RunStop()
 {
   int Ret=0;
-
-  if (PythonRunning)
-  {
-    MessageBox(0, "Uh oh.  You're in deep shit now.", "Error", 0);
-  }
 
   if (hRunThread!=NULL)
   {

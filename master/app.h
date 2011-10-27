@@ -37,14 +37,6 @@ typedef unsigned short u16;
 typedef unsigned long u32;
 typedef unsigned long long u64;
 
-typedef char INT8;
-typedef short INT16;
-typedef long long INT64;
-
-typedef unsigned char UINT8;
-typedef unsigned short UINT16;
-typedef unsigned long long UINT64;
-
 // Make the INLINE macro
 #undef INLINE
 #define INLINE inline
@@ -64,7 +56,6 @@ extern int ScrnWidth,ScrnHeight;
 extern int Fullscreen;
 extern HACCEL hAccel; // Key accelerators
 extern int StartInFullscreen;
-extern int PythonLoaded;
 
 // loop.cpp
 extern int AppShowCmd;
@@ -165,13 +156,10 @@ int DirInputFind();
 extern char RomFolder[];
 extern char StateFolder[256];
 extern char VgmName[];
-extern char PythonScriptName[];
 int MenuLoadRom();
 int MenuStatePort(int Export);
 int MenuStateLoad(int Save);
 int MenuVgmStart();
-int MenuPython(int thread);
-void MenuPythonFixed(char *script, int thread);
 #define WMU_TOGGLEMENU       (WM_APP+0)
 #define WMU_CHANGEDROM       (WM_APP+1)
 #define WMU_COMMAND          (WM_APP+2)
@@ -182,8 +170,6 @@ void MenuPythonFixed(char *script, int thread);
 #define WMU_VGMSTART         (WM_APP+7)
 #define WMU_VIDEOPLAYBACK    (WM_APP+8)
 #define WMU_VIDEORECORD      (WM_APP+10)
-#define WMU_PYTHON           (WM_APP+9)
-#define WMU_PYTHON_THREAD    (WM_APP+11)
 #define WMU_SIZE             (WM_APP+12)
 
 // conf.cpp
@@ -221,15 +207,6 @@ extern unsigned short ModifierKeys[KMODIFIERCOUNT];
 extern int HeldModifierKeys[KMODIFIERCOUNT];
 void CheckModifierKeys();
 void KeyMapping();
-
-// python.cpp
-extern int PythonLoaded, PythonRunning;
-void PythonLoad(int argc, char **argv);
-void PythonInit();
-void PythonExit();
-void PythonRun();
-void PythonRunThread();
-void PythonPostFrame();
 
 // zipfn.cpp
 int ZipOpen(char *ZipName);

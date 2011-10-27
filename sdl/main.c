@@ -13,8 +13,6 @@
 #include <pthread.h>
 #include <time.h>
 
-#include "../python/embed.h"
-
 SDL_Surface *thescreen;
 unsigned short themap[256];
 
@@ -27,7 +25,6 @@ int mult=0;
 
 int readonly;
 
-int python;
 int vidflags=0;
 
 int scrlock()
@@ -199,59 +196,6 @@ void HandleSetAuthor(void) {
 	EnterFullScreen();
 }
 
-void HandlePython(void) {
-	char buffer[64];
-	LeaveFullScreen();
-	
-	if (!python) {
-		puts("Python not available!");
-		return;
-	}
-
-	puts("Enter name of Python control script to execute:");
-	chompgets(buffer, sizeof(buffer), stdin);
-
-	EnterFullScreen();
-
-	MPyEmbed_Run(buffer);
-}
-
-void HandlePythonREPL(void) {
-	if (!python) {
-		puts("Python not available!");
-		return;
-	}
-	LeaveFullScreen();
-	MPyEmbed_Repl();
-	EnterFullScreen();
-}
-
-void *PythonThreadRun(void *pbuf) {
-	char *buffer = pbuf;
-	MPyEmbed_RunThread(buffer);
-	free(buffer);
-	return 0;
-}
-
-void HandlePythonThread(void) {
-	char *buffer = malloc(64);
-	pthread_t pythread;
-	LeaveFullScreen();
-	
-	if (!python) {
-		puts("Python not available!");
-		free(buffer);
-		return;
-	}
-
-	puts("Enter name of Python viewer script to execute:");
-	chompgets(buffer, 64, stdin);
-
-	EnterFullScreen();
-
-	pthread_create(&pythread, 0, PythonThreadRun, buffer);
-}
-
 void SetRateMult() {
 	int newrate = mult>0 ? framerate<<mult : framerate>>-mult;
 	if (newrate < 1) newrate = 1;
@@ -326,12 +270,6 @@ void MimplFrame(int input) {
 	MastFrame();
 	scrunlock();
 
-#if 0
-	pydega_cbpostframe(mainstate);
-#else
-	MPyEmbed_CBPostFrame();
-#endif
-
 	if (input) {
 		MastInput[0]&=~0x40;
 	}
@@ -375,8 +313,6 @@ int main(int argc, char** argv)
 	setlocale(LC_CTYPE, "");
 
 	readonly = 0;
-
-	MPyEmbed_SetArgv(argc, argv);
 
 	while(1)
 	{
@@ -500,9 +436,6 @@ int main(int argc, char** argv)
 		pMsndOut=NULL;
 	}
 
-	MPyEmbed_Init();
-	python = MPyEmbed_Available();
-
 	MastDrawDo=1;
 	while(!done)
 	{
@@ -511,15 +444,6 @@ int main(int argc, char** argv)
 			scrlock();
 			MastFrame();
 			scrunlock();
-
-#if 0
-			clock_gettime(CLOCK_REALTIME, &t1);
-			pydega_cbpostframe(mainstate);
-			clock_gettime(CLOCK_REALTIME, &t2);
-			printf("postframe took %d ns\n", t2.tv_nsec-t1.tv_nsec);
-#else
-			MPyEmbed_CBPostFrame();
-#endif
 
 			MastInput[0]&=~0x40;
 			if(sound)
@@ -572,9 +496,6 @@ Handler:		switch (event.type)
 				if(key==SDLK_s) {HandleSaveState();break;}
 				if(key==SDLK_l) {HandleLoadState();break;}
 				if(key==SDLK_a) {HandleSetAuthor();break;}
-				if(key==SDLK_n) {HandlePython();break;}
-				if(key==SDLK_m) {HandlePythonREPL();break;}
-				if(key==SDLK_i) {HandlePythonThread();break;}
 				if(key==SDLK_b) {MdrawOsdOptions^=OSD_BUTTONS;break;}
 				if(key==SDLK_f) {MdrawOsdOptions^=OSD_FRAMECOUNT;break;}
 				if(key==SDLK_EQUALS) {mult++;SetRateMult();break;}
@@ -609,9 +530,6 @@ Handler:		switch (event.type)
 		{
 			if(sound) while(audio_len>aspec.samples*aspec.channels*2*4) usleep(5);
 		}
-	}
-	if (python) {
-		MPyEmbed_Fini();
 	}
 	return 0;
 }

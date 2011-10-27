@@ -27,9 +27,9 @@ else
 endif
 
 ifeq ($(P),unix)
-	CFLAGS= $(OPTFLAGS) $(shell sdl-config --cflags) -DUSE_MENCODER -Imast -Idoze -Ilibmencoder -D__cdecl= -D__fastcall=
+	CFLAGS= $(OPTFLAGS) $(shell sdl-config --cflags) -DUSE_MENCODER -Imast -Idoze -Ilibmencoder -D__cdecl= -D__fastcall= -Iliblua
 else ifeq ($(P),win)
-	CFLAGS= $(OPTFLAGS) -DUSE_VFW -mno-cygwin -Imast -Idoze -Imaster -Iextra -Izlib -Ilibvfw 
+	CFLAGS= $(OPTFLAGS) -DUSE_VFW -mno-cygwin -Imast -Idoze -Imaster -Iextra -Izlib -Ilibvfw -Iliblua
 endif
 
 ifndef Z80
@@ -48,8 +48,6 @@ CXXFLAGS= $(CFLAGS) -fno-exceptions
 
 DAMOBJ = doze/dam.o doze/dama.o doze/damc.o doze/dame.o doze/damf.o doze/damj.o doze/damm.o doze/damo.o doze/damt.o
 MASTOBJ = mast/area.o mast/dpsg.o mast/draw.o mast/emu2413.o mast/frame.o mast/load.o mast/map.o mast/mast.o mast/mem.o mast/samp.o mast/snd.o mast/vgm.o mast/video.o mast/osd.o mast/md5.o
-PYOBJ = python/pydega.o python/stdalone.o
-PYEMBOBJ = python/pydega.emb.o python/embed.emb.o
 
 ifeq ($(P),unix)
 ifeq ($(BITS),64)
@@ -60,8 +58,6 @@ endif
 	EXEEXT =
 	SOEXT = .so
 	PLATOBJ = sdl/main.o
-	PLATPYOBJ =
-	PLATPYOBJCXX =
 	EXTRA_LIBS = $(shell sdl-config --libs)
 	DOZE_FIXUP = sed -f doze/doze.cmd.sed <doze/dozea.asm >doze/dozea.asm.new && mv doze/dozea.asm.new doze/dozea.asm
 	ENCODER_OBJ = tools/degavi.o
@@ -70,35 +66,21 @@ endif
 	EXTRA_LDFLAGS =
 	GUI_LDFLAGS =
 	SPECS =
-	PYTHON_CFLAGS = $(shell python-config --cflags) $(CFLAGS)
-	PYTHON_CXXFLAGS = $(shell python-config --cflags) $(CXXFLAGS)
-	PYTHON_LDFLAGS = $(shell python-config --ldflags) -lm
 else ifeq ($(P),win)
 	NASM_FORMAT = win32
 	EXEEXT = .exe
-	SOEXT = .pyd
-	PLATOBJ = master/app.o master/conf.o master/dinp.o master/disp.o master/dsound.o master/emu.o master/frame.o master/input.o master/load.o master/loop.o master/main.o master/misc.o master/python.o master/render.o master/run.o master/shot.o master/state.o master/video.o master/zipfn.o master/keymap.o zlib/libz.a master/ramwatch.o master/ramsearch.o master/luaconsole.o master/luasav.o master/luaengine.o 
-	PLATPYOBJ =
-	PLATPYOBJCXX =
-	EXTRA_LIBS = -ldsound -ldinput -lddraw -ldxguid -lcomdlg32 -lcomctl32 -luser32 -lwinmm -llua51 -lgdi32
+	PLATOBJ = master/app.o master/conf.o master/dinp.o master/disp.o master/dsound.o master/emu.o master/frame.o master/input.o master/load.o master/loop.o master/main.o master/misc.o master/render.o master/run.o master/shot.o master/state.o master/video.o master/zipfn.o master/keymap.o zlib/libz.a master/ramwatch.o master/ramsearch.o master/luaconsole.o master/luasav.o master/luaengine.o liblua/liblua.a
+	EXTRA_LIBS = -ldsound -ldinput -lddraw -ldxguid -lcomdlg32 -lcomctl32 -luser32 -lwinmm -lgdi32
 	DOZE_FIXUP =
 	ENCODER_OBJ = tools/wdegavi.o tools/degavirc.o
 	ENCODER_LIBS = libvfw/libvfw.a
 	ENCODER_LDFLAGS = -lcomdlg32 -lvfw32 -lmsacm32 -lole32 -lm -Wl,--subsystem,windows
-	EXTRA_LDFLAGS = -specs=$(shell pwd)/specs -mno-cygwin -static
+	EXTRA_LDFLAGS = -specs=specs -mno-cygwin -static
 	GUI_LDFLAGS = -Wl,--subsystem,windows
 	SPECS = specs
-	PYTHON_PREFIX = /home/peter/pytest/winpython
-	PYTHON_CFLAGS = -I$(PYTHON_PREFIX)/include $(CFLAGS)
-	PYTHON_CXXFLAGS = -I$(PYTHON_PREFIX)/include $(CFLAGS)
-	PYTHON_LDFLAGS = -L$(PYTHON_PREFIX)/libs -lpython27
 endif
 
 ALLOBJ = dega-s$(EXEEXT) # mmvconv$(EXEEXT) degavi$(EXEEXT)
-
-#ifneq ($(BITS),64)
-#ALLOBJ += pydega$(SOEXT)
-#endif
 
 ifeq ($(P),unix)
 
@@ -122,6 +104,9 @@ else ifeq ($(P),win)
 
 all: $(ALLOBJ)
 
+liblua/liblua.a:
+	$(MAKE) -Cliblua PLAT=mingw CFLAGS="$(CFLAGS)" liblua.a
+
 zlib/libz.a:
 	$(MAKE) -Czlib CFLAGS="$(CFLAGS)" libz.a
 
@@ -131,9 +116,9 @@ libvfw/libvfw.a:
 release: all
 	rm -rf dega-$(R)-win32-$(Z80)
 	mkdir dega-$(R)-win32-$(Z80)
-	cp dega.exe degavi.exe pydega$(SOEXT) mmvconv.exe dega.txt python/scripts/*.py dega-$(R)-win32-$(Z80)/
-	$(STRIP) dega-$(R)-win32-$(Z80)/dega.exe dega-$(R)-win32-$(Z80)/degavi.exe dega-$(R)-win32-$(Z80)/pydega$(SOEXT) dega-$(R)-win32-$(Z80)/mmvconv.exe
-	cd dega-$(R)-win32-$(Z80) && zip -9 ../dega-$(R)-win32-$(Z80).zip dega.exe pydega$(SOEXT) degavi.exe mmvconv.exe dega.txt *.py
+	cp dega.exe degavi.exe mmvconv.exe dega.txt dega-$(R)-win32-$(Z80)/
+	$(STRIP) dega-$(R)-win32-$(Z80)/dega.exe dega-$(R)-win32-$(Z80)/degavi.exe dega-$(R)-win32-$(Z80)/mmvconv.exe
+	cd dega-$(R)-win32-$(Z80) && zip -9 ../dega-$(R)-win32-$(Z80).zip dega.exe degavi.exe mmvconv.exe dega.txt
 
 else
 
@@ -143,8 +128,8 @@ all:
 
 endif
 
-dega-s$(EXEEXT): $(PLATOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) $(Z80OBJ) $(MASTOBJ) $(PYEMBOBJ) $(SPECS)
-	$(CXX) $(EXTRA_LDFLAGS) $(GUI_LDFLAGS) -o dega-s$(EXEEXT) $(PLATOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) $(Z80OBJ) $(MASTOBJ) $(PYEMBOBJ) $(EXTRA_LIBS)
+dega-s$(EXEEXT): $(PLATOBJ) $(Z80OBJ) $(MASTOBJ) $(SPECS)
+	$(CXX) $(EXTRA_LDFLAGS) $(GUI_LDFLAGS) -o dega-s$(EXEEXT) $(PLATOBJ) $(Z80OBJ) $(MASTOBJ) $(EXTRA_LIBS)
 	$(STRIP) dega-s$(EXEEXT)
 
 degavi$(EXEEXT): tools/avioutput.o $(ENCODER_OBJ) $(Z80OBJ) $(MASTOBJ) $(ENCODER_LIBS)
@@ -152,9 +137,6 @@ degavi$(EXEEXT): tools/avioutput.o $(ENCODER_OBJ) $(Z80OBJ) $(MASTOBJ) $(ENCODER
 
 mmvconv$(EXEEXT): tools/mmvconv.o $(SPECS)
 	$(CC) $(EXTRA_LDFLAGS) -o mmvconv$(EXEEXT) tools/mmvconv.o
-
-pydega$(SOEXT): $(PYOBJ) $(Z80OBJ) $(MASTOBJ) $(SPECS)
-	$(CC) -shared -o pydega$(SOEXT) $(PYOBJ) $(Z80OBJ) $(MASTOBJ) $(EXTRA_LDFLAGS) $(PYTHON_LDFLAGS)
 
 doze/dozea.o: doze/dozea.asm
 	nasm -f $(NASM_FORMAT) -o doze/dozea.o doze/dozea.asm
@@ -173,25 +155,14 @@ tools/degavirc.o: tools/degavirc.rc
 	cd tools && $(WINDRES) -o degavirc.o degavirc.rc
 
 specs:
-	$(CC) -dumpspecs | sed -e 's/-lmsvcrt/-lmsvcr71/g' > specs
-
-$(PYOBJ): %.o: %.c
-	$(CC) -c -o $@ $< $(PYTHON_CFLAGS)
-
-$(PLATPYOBJ): %.o: %.c
-	$(CC) -c -o $@ $< -DEMBEDDED $(PYTHON_CFLAGS)
-
-$(PLATPYOBJCXX): %.o: %.cpp
-	$(CXX) -c -o $@ $< -DEMBEDDED $(PYTHON_CXXFLAGS)
-
-%.emb.o: %.c
-	$(CC) -c -o $@ $< -DEMBEDDED $(PYTHON_CFLAGS)
+	$(CXX) -dumpspecs | sed -e "s/-lmsvcrt/-lmsvcr71/g" > specs
 
 clean:
-	rm -f $(Z80OBJ) $(DAMOBJ) $(MASTOBJ) $(PLATOBJ) $(PYOBJ) $(PYEMBOBJ) $(PLATPYOBJ) $(PLATPYOBJCXX) tools/avioutput.o tools/degavi.o tools/degavirc.o tools/mmvconv.o tools/wdegavi.o doze/dozea.asm* doze/dam doze/dam.exe dega dega.exe degavi degavi.exe mmvconv mmvconv.exe pydega.so pydega.dll pydega.pyd specs
+	rm -f $(Z80OBJ) $(DAMOBJ) $(MASTOBJ) $(PLATOBJ) tools/avioutput.o tools/degavi.o tools/degavirc.o tools/mmvconv.o tools/wdegavi.o doze/dozea.asm* doze/dam doze/dam.exe dega dega.exe degavi degavi.exe mmvconv mmvconv.exe specs
 	make -Czlib clean
 	make -Clibmencoder clean
-#	make -Clibvfw clean
+	make -Clibvfw clean
+	make -Cliblua clean
 
 distclean: clean
 	rm -f *~ */*~
