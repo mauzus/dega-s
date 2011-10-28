@@ -1,5 +1,6 @@
 // Mast - memory module
 #include "mastint.h"
+#include "../master/luaengine.h"
 
 // --------------------------  Video chip access  -----------------------------
 
@@ -234,6 +235,9 @@ void MastSetMemHandlers()
   Z80SetProgramWriteHandler(WriteProgHandler);
   Z80SetCPUOpReadHandler(ReadProgHandler);
   Z80SetCPUOpArgReadHandler(ReadProgHandler);
+
+  LuaSetProgramReadHandler(ReadProgHandler);
+  LuaSetProgramWriteHandler(WriteProgHandler);
 }
 
 #endif

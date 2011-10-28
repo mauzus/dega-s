@@ -240,7 +240,7 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 
 			case IDC_BUTTON_LUAEDIT:
 			{
-				TCHAR Str_Tmp [1024]; // shadow added because the global one is unreliable
+				char Str_Tmp [1024]; // shadow added because the global one is unreliable
 				SendDlgItemMessage(hDlg,IDC_EDIT_LUAPATH,WM_GETTEXT,(WPARAM)512,(LPARAM)Str_Tmp);
 				// tell the OS to open the file with its associated editor,
 				// without blocking on it or leaving a command window open.
@@ -253,7 +253,7 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 			{
 //				AudBlankSound();
 				OPENFILENAME  luaofn;
-				TCHAR szFileName[MAX_PATH];
+				char szFileName[MAX_PATH];
 				szFileName[0] = '\0';
 				ZeroMemory( (LPVOID)&luaofn, sizeof(OPENFILENAME) );
 				luaofn.lStructSize = sizeof(OPENFILENAME);
@@ -324,7 +324,7 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 		HDROP hDrop;
 		//UINT fileNo;
 		UINT fileCount;
-		TCHAR filename[_MAX_PATH];
+		char filename[MAX_PATH];
 
 		hDrop = (HDROP)wParam;
 		fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);

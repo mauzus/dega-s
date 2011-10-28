@@ -48,4 +48,9 @@ void luasav_save(const char *filename);
 void luasav_load(const char *filename);
 void lua_init();
 
+typedef unsigned char (__fastcall *LuaReadProgHandler)(unsigned int a);
+typedef void (__fastcall *LuaWriteProgHandler)(unsigned int a, unsigned char v);
+void LuaSetProgramReadHandler(LuaReadProgHandler handler);
+void LuaSetProgramWriteHandler(LuaWriteProgHandler handler);
+
 #endif

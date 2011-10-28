@@ -24,7 +24,6 @@ extern "C" {
 
 #include "app.h"
 #include "luasav.h"
-#include <mastint.h>
 #ifdef WIN32
 #include <direct.h>
 #include <windows.h>
@@ -59,7 +58,7 @@ static int LUA_SCREEN_WIDTH  = 256;
 static int LUA_SCREEN_HEIGHT = 192;
 
 // Current working directory of the script
-static char luaCWD [_MAX_PATH] = {0};
+static char luaCWD [MAX_PATH] = {0};
 
 // Are we running any code right now?
 static char *luaScriptName = NULL;
@@ -89,7 +88,7 @@ static int frameAdvanceWaiting = FALSE;
 static int transparencyModifier = 255;
 
 // Our joypads.
-static short lua_joypads[2];
+static int lua_joypads[2];
 static UINT8 lua_joypads_used;
 static const char *button_mappings[] = {
 	"up","down","left","right","1","2","null","start"
@@ -125,6 +124,22 @@ static const char* toCString(lua_State* L, int idx=0);
 static int usingMemoryRegister=0;
 
 static std::string empty_driver("empty");
+
+static LuaReadProgHandler LuaProgramRead;
+static LuaWriteProgHandler LuaProgramWrite;
+
+void LuaSetProgramReadHandler(LuaReadProgHandler handler)
+{
+	LuaProgramRead = handler;
+}
+
+void LuaSetProgramWriteHandler(LuaWriteProgHandler handler)
+{
+	LuaProgramWrite = handler;
+}
+
+#define RM(addr) (uint8_t)LuaProgramRead(addr)
+#define WM(addr,value) LuaProgramWrite(addr,value)
 
 /**
  * Resets emulator speed / pause states after script exit.
@@ -201,13 +216,13 @@ void DEGA_LuaWriteInform() {
 		lua_pushvalue(LUA, 2);
 		lua_gettable(LUA, 4);
 		value = luaL_checkinteger(LUA, 5);
-		if (value != (lua_Integer)pMastb->Ram[addr&0x1fff])
+		if (value != (lua_Integer)RM(addr))
 		{
 			int res;
 
 			// Value changed; update & invoke the Lua callback
 			lua_pushinteger(LUA, addr);
-			lua_pushinteger(LUA, pMastb->Ram[addr&0x1fff]);
+			lua_pushinteger(LUA, RM(addr));
 			lua_settable(LUA, 4);
 			lua_pop(LUA, 2);
 
@@ -217,7 +232,7 @@ void DEGA_LuaWriteInform() {
 				const char *err = lua_tostring(LUA, -1);
 				
 #ifdef WIN32
-				MessageBoxA(hFrameWnd, err, "Lua Engine", MB_OK);
+				MessageBox(hFrameWnd, err, "Lua Engine", MB_OK);
 #else
 				fprintf(stderr, "Lua error: %s\n", err);
 #endif
@@ -708,8 +723,8 @@ static int dega_registerstart(lua_State *L) {
 }
 
 static UINT16 custom_read_word(HWAddressType address) {
-	UINT8 byte0 = pMastb->Ram[(address + 0)&0x1fff];
-	UINT8 byte1 = pMastb->Ram[(address + 1)&0x1fff];
+	UINT8 byte0 = RM((address + 0));
+	UINT8 byte1 = RM((address + 1));
 	return (byte0 | (byte1 << 8));
 }
 
@@ -721,12 +736,12 @@ static UINT32 custom_read_dword(HWAddressType address) {
 
 static int memory_readbyte(lua_State *L)
 {
-	lua_pushinteger(L, pMastb->Ram[luaL_checkinteger(L,1)&0x1fff] );
+	lua_pushinteger(L, RM(luaL_checkinteger(L,1)) );
 	return 1;
 }
 
 static int memory_readbytesigned(lua_State *L) {
-	lua_pushinteger(L, (signed char)pMastb->Ram[luaL_checkinteger(L,1)&0x1fff]);
+	lua_pushinteger(L, (signed char)RM(luaL_checkinteger(L,1)));
 	return 1;
 }
 
@@ -775,7 +790,7 @@ static int memory_readbyterange(lua_State *L) {
 	// put all the values into the (1-based) array
 	for(a = address, n = 1; n <= length; a++, n++)
 	{
-		unsigned char value = pMastb->Ram[address&0x1fff];
+		unsigned char value = RM(address);
 		lua_pushinteger(L, value);
 		lua_rawseti(L, -2, n);
 	}
@@ -784,8 +799,8 @@ static int memory_readbyterange(lua_State *L) {
 }
 
 void custom_write_word(HWAddressType address, UINT16 data) {
-	pMastb->Ram[(address + 0)&0x1fff] = data >> 0;
-	pMastb->Ram[(address + 1)&0x1fff] = data >> 8;
+	WM((address + 0),(data >> 0));
+	WM((address + 1),(data >> 8));
 }
 
 void custom_write_dword(HWAddressType address, UINT32 data) {
@@ -795,7 +810,7 @@ void custom_write_dword(HWAddressType address, UINT32 data) {
 
 static int memory_writebyte(lua_State *L)
 {
-	pMastb->Ram[luaL_checkinteger(L,1)&0x1fff] = luaL_checkinteger(L,2);
+	WM(luaL_checkinteger(L,1),luaL_checkinteger(L,2));
 	return 0;
 }
 
@@ -833,7 +848,7 @@ static int memory_registerwrite(lua_State *L) {
 	lua_getfield(L, LUA_REGISTRYINDEX, memoryValueTable);
 	lua_pushvalue(L,1);
 	if (lua_isnil(L,2)) lua_pushnil(L);
-	else lua_pushinteger(L, pMastb->Ram[addr&0x1fff]);
+	else lua_pushinteger(L, RM(addr));
 	lua_settable(L, -3);
 	
 	if(!usingMemoryRegister)
@@ -890,7 +905,7 @@ static int joypad_getup(lua_State *L)
 	return joy_get_internal(L, true, false);
 }
 
-// joypad.set(table buttons)
+// joypad.set(int which, table buttons)
 //
 //   Sets the given buttons to be pressed during the next
 //   frame advance. The table should have the right 
@@ -2484,7 +2499,7 @@ static int doPopup(lua_State *L, const char* deftype, const char* deficon) {
 	{
 		static const int etypes [] = {MB_OK, MB_YESNO, MB_YESNOCANCEL, MB_OKCANCEL, MB_ABORTRETRYIGNORE};
 		static const int eicons [] = {MB_ICONINFORMATION, MB_ICONQUESTION, MB_ICONWARNING, MB_ICONERROR};
-		int ianswer = MessageBoxA(hFrameWnd, str, titles[iicon], etypes[itype] | eicons[iicon]);
+		int ianswer = MessageBox(hFrameWnd, str, titles[iicon], etypes[itype] | eicons[iicon]);
 		switch(ianswer)
 		{
 			case IDOK: answer = "ok"; break;
@@ -3067,7 +3082,7 @@ static void DEGA_LuaHookFunction(lua_State *L, lua_Debug *dbg) {
 
 #ifdef WIN32
 		// Uh oh
-		int ret = MessageBoxA(hFrameWnd, "The Lua script running has been running a long time. It may have gone crazy. Kill it?\n\n(No = don't check anymore either)", "Lua Script Gone Nuts?", MB_YESNO);
+		int ret = MessageBox(hFrameWnd, "The Lua script running has been running a long time. It may have gone crazy. Kill it?\n\n(No = don't check anymore either)", "Lua Script Gone Nuts?", MB_YESNO);
 		
 		if (ret == IDYES) {
 			kill = 1;
@@ -3110,7 +3125,7 @@ void HandleCallbackError(lua_State* L)
 
 		// Error?
 #ifdef WIN32
-		MessageBoxA(hFrameWnd, lua_tostring(LUA,-1), "Lua run error", MB_OK | MB_ICONSTOP);
+		MessageBox(hFrameWnd, lua_tostring(LUA,-1), "Lua run error", MB_OK | MB_ICONSTOP);
 #else
 		dega_printf_info("Lua thread bombed out: %s\n", lua_tostring(LUA,-1));
 #endif
@@ -3133,7 +3148,7 @@ void CallExitFunction() {
 	{
 		chdir(luaCWD);
 		errorcode = lua_pcall(LUA, 0, 0, 0);
-		_getcwd(luaCWD, _MAX_PATH);
+		_getcwd(luaCWD, MAX_PATH);
 	}
 
 	if (errorcode)
@@ -3318,7 +3333,7 @@ void DEGA_LuaFrameBoundary() {
 	numTries = 1000;
 	chdir(luaCWD);
 	result = lua_resume(thread, 0);
-	_getcwd(luaCWD, _MAX_PATH);
+	_getcwd(luaCWD, MAX_PATH);
 	
 	if (result == LUA_YIELD) {
 		// Okay, we're fine with that.
@@ -3330,14 +3345,15 @@ void DEGA_LuaFrameBoundary() {
 		
 		// Error?
 #ifdef WIN32
-		MessageBoxA(hFrameWnd, lua_tostring(thread,-1), "Lua run error", MB_OK | MB_ICONSTOP);
+		MessageBox(hFrameWnd, lua_tostring(thread,-1), "Lua run error", MB_OK | MB_ICONSTOP);
 #else
 		dega_printf_info("Lua thread bombed out: %s\n", lua_tostring(thread,-1));
 #endif
 
 	} else {
 		DEGA_LuaOnStop();
-//		RunText("Script died of natural causes.", 2*60);
+		char msg[40] = "Script died of natural causes.";
+		RunText(msg, 2*60);
 	}
 
 	// Past here, the nes actually runs, so any Lua code is called mid-frame. We must
@@ -3360,7 +3376,7 @@ void DEGA_LuaFrameBoundary() {
 int DEGA_LoadLuaCode(const char *filename) {
 	lua_State *thread;
 	int result;
-	char dir[_MAX_PATH];
+	char dir[MAX_PATH];
 	char *slash, *backslash;
 
 	usingMemoryRegister=0;
@@ -3381,7 +3397,7 @@ int DEGA_LoadLuaCode(const char *filename) {
 		slash[1] = '\0';    // keep slash itself for some reasons
 		_chdir(dir);
 	}
-	_getcwd(luaCWD, _MAX_PATH);
+	_getcwd(luaCWD, MAX_PATH);
 
 	if (!LUA) {
 		LUA = lua_open();
@@ -3429,7 +3445,7 @@ int DEGA_LoadLuaCode(const char *filename) {
 	if (result) {
 #ifdef WIN32
 		// Doing this here caused nasty problems; reverting to MessageBox-from-dialog behavior.
-		MessageBoxA(NULL, lua_tostring(LUA,-1), "Lua load error", MB_OK | MB_ICONSTOP);
+		MessageBox(NULL, lua_tostring(LUA,-1), "Lua load error", MB_OK | MB_ICONSTOP);
 #else
 		dega_printf_info("Failed to compile file: %s\n", lua_tostring(LUA,-1));
 #endif
@@ -3486,8 +3502,10 @@ int DEGA_LoadLuaCode(const char *filename) {
  */
 void DEGA_ReloadLuaCode()
 {
-	if (!luaScriptName)
-		RunText("There's no script to reload.", 2*60);
+	if (!luaScriptName) {
+		char msg[40] = "There's no script to reload.";
+		RunText(msg, 2*60);
+	}
 	else
 		DEGA_LoadLuaCode(luaScriptName);
 }
