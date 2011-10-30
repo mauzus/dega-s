@@ -23,13 +23,6 @@
 // is somewhat horrendous, but it seems reasonable to have poor worst-case speed
 // during these sporadic "setup" steps to achieve an all-around faster per-update speed.
 // (You can test this case by performing the search: Modulo 2 Is Specific Address 0)
- 
-
-//#include "../PsxCommon.h"
-//#include "../cheat.h"
-//#ifdef WIN32
-//#include "Win32.h"
-//#endif
 
 
 #include "app.h"
@@ -53,7 +46,7 @@ static inline u8* HardwareToSoftwareAddress(HWAddressType address)
 	//	return NULL;
 
 	if (address >= 0xc000 && address < 0xe000)
-		return (u8*) &pMastb->Ram[address&0x1fff];
+		return (u8*)&MemRead[address >> 8][address];
 	else
 		return NULL;
 }

@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <assert.h>
+#include <map>
+#include <string>
 
 using std::min;
 using std::max;
@@ -24,6 +27,7 @@ extern "C" {
 
 #include "app.h"
 #include "luasav.h"
+#include "../z80jb/z80.h"
 #ifdef WIN32
 #include <direct.h>
 #include <windows.h>
@@ -77,8 +81,6 @@ static int skipRerecords = FALSE;
 
 // Used by the registry to find our functions
 static const char *frameAdvanceThread = "DEGA.FrameAdvance";
-static const char *memoryWatchTable = "DEGA.Memory";
-static const char *memoryValueTable = "DEGA.MemValues";
 static const char *guiCallbackTable = "DEGA.GUI";
 
 // True if there's a thread waiting to run after a run of frame-advance.
@@ -103,6 +105,18 @@ static UINT8 *gui_data = NULL;
 // over time. The script gets knifed once this reaches zero.
 static int numTries;
 
+// number of registered memory functions (1 per hooked byte)
+static unsigned int numMemHooks;
+
+#ifdef _MSC_VER
+	#define snprintf _snprintf
+	#define vscprintf _vscprintf
+#else
+	#define stricmp strcasecmp
+	#define strnicmp strncasecmp
+	#define __forceinline __attribute__((always_inline))
+#endif
+
 static const char* luaCallIDStrings [] =
 {
 	"CALL_BEFOREEMULATION",
@@ -120,8 +134,12 @@ static const char* luaCallIDStrings [] =
 static char* rawToCString(lua_State* L, int idx=0);
 static const char* toCString(lua_State* L, int idx=0);
 
-// LuaWriteInform is very slow, so we'll only use it if memory.register was used in this session.
-static int usingMemoryRegister=0;
+static const char* luaMemHookTypeStrings [] =
+{
+	"MEMHOOK_WRITE",
+	"MEMHOOK_READ",
+	"MEMHOOK_EXEC",
+};
 
 static std::string empty_driver("empty");
 
@@ -196,52 +214,6 @@ int DEGA_LuaFrameSkip() {
 	return 0;
 }
 
-
-/**
- * When code determines that a write has occurred
- * (not necessarily worth informing Lua), call this.
- */
-void DEGA_LuaWriteInform() {
-	if (!LUA || !luaRunning || !usingMemoryRegister) return;
-	// Nuke the stack, just in case.
-	lua_settop(LUA,0);
-
-	lua_getfield(LUA, LUA_REGISTRYINDEX, memoryWatchTable);
-	lua_pushnil(LUA);
-	while (lua_next(LUA, 1) != 0)
-	{
-		unsigned int addr = luaL_checkinteger(LUA, 2);
-		lua_Integer value;
-		lua_getfield(LUA, LUA_REGISTRYINDEX, memoryValueTable);
-		lua_pushvalue(LUA, 2);
-		lua_gettable(LUA, 4);
-		value = luaL_checkinteger(LUA, 5);
-		if (value != (lua_Integer)RM(addr))
-		{
-			int res;
-
-			// Value changed; update & invoke the Lua callback
-			lua_pushinteger(LUA, addr);
-			lua_pushinteger(LUA, RM(addr));
-			lua_settable(LUA, 4);
-			lua_pop(LUA, 2);
-
-			numTries = 1000;
-			res = lua_pcall(LUA, 0, 0, 0);
-			if (res) {
-				const char *err = lua_tostring(LUA, -1);
-				
-#ifdef WIN32
-				MessageBox(hFrameWnd, err, "Lua Engine", MB_OK);
-#else
-				fprintf(stderr, "Lua error: %s\n", err);
-#endif
-			}
-		}
-		lua_settop(LUA, 2);
-	}
-	lua_settop(LUA, 0);
-}
 
 ///////////////////////////
 
@@ -722,6 +694,239 @@ static int dega_registerstart(lua_State *L) {
 	return 1;
 }
 
+
+void HandleCallbackError(lua_State* L)
+{
+	//if(L->errfunc || L->errorJmp)
+	//      luaL_error(L, "%s", lua_tostring(L,-1));
+	//else
+	{
+		lua_pushnil(L);
+		lua_setfield(L, LUA_REGISTRYINDEX, guiCallbackTable);
+
+		// Error?
+#ifdef WIN32
+		MessageBox(hFrameWnd, lua_tostring(L,-1), "Lua run error", MB_OK | MB_ICONSTOP);
+#else
+		fprintf(stderr, "Lua thread bombed out: %s\n", lua_tostring(L,-1));
+#endif
+
+		DEGA_LuaStop();
+	}
+}
+
+
+// the purpose of this structure is to provide a way of
+// QUICKLY determining whether a memory address range has a hook associated with it,
+// with a bias toward fast rejection because the majority of addresses will not be hooked.
+// (it must not use any part of Lua or perform any per-script operations,
+//  otherwise it would definitely be too slow.)
+// calculating the regions when a hook is added/removed may be slow,
+// but this is an intentional tradeoff to obtain a high speed of checking during later execution
+struct TieredRegion
+{
+	template<unsigned int maxGap>
+	struct Region
+	{
+		struct Island
+		{
+			unsigned int start;
+			unsigned int end;
+			__forceinline bool Contains(unsigned int address, int size) const { return address < end && address+size > start; }
+		};
+		std::vector<Island> islands;
+
+		void Calculate(const std::vector<unsigned int>& bytes)
+		{
+			islands.clear();
+
+			unsigned int lastEnd = ~0;
+
+			std::vector<unsigned int>::const_iterator iter = bytes.begin();
+			std::vector<unsigned int>::const_iterator end = bytes.end();
+			for(; iter != end; ++iter)
+			{
+				unsigned int addr = *iter;
+				if(addr < lastEnd || addr > lastEnd + (long long)maxGap)
+				{
+					islands.push_back(Island());
+					islands.back().start = addr;
+				}
+				islands.back().end = addr+1;
+				lastEnd = addr+1;
+			}
+		}
+
+		bool Contains(unsigned int address, int size) const
+		{
+			typename std::vector<Island>::const_iterator iter = islands.begin();
+			typename std::vector<Island>::const_iterator end = islands.end();
+			for(; iter != end; ++iter)
+				if(iter->Contains(address, size))
+					return true;
+			return false;
+		}
+	};
+
+	Region<0xFFFFFFFF> broad;
+	Region<0x1000> mid;
+	Region<0> narrow;
+
+	void Calculate(std::vector<unsigned int>& bytes)
+	{
+		std::sort(bytes.begin(), bytes.end());
+
+		broad.Calculate(bytes);
+		mid.Calculate(bytes);
+		narrow.Calculate(bytes);
+	}
+
+	TieredRegion()
+	{
+//		Calculate(std::vector<unsigned int>()); // TODO: this doesn't compile... So I wrote the next two lines (I should learn C++)
+		std::vector<unsigned int> bytes;
+		Calculate(bytes);
+	}
+
+	__forceinline int NotEmpty()
+	{
+		return broad.islands.size();
+	}
+
+	// note: it is illegal to call this if NotEmpty() returns 0
+	__forceinline bool Contains(unsigned int address, int size)
+	{
+		return broad.islands[0].Contains(address,size) &&
+		       mid.Contains(address,size) &&
+			   narrow.Contains(address,size);
+	}
+};
+TieredRegion hookedRegions [LUAMEMHOOK_COUNT];
+
+
+static void CalculateMemHookRegions(LuaMemHookType hookType)
+{
+	std::vector<unsigned int> hookedBytes;
+//      std::map<int, LuaContextInfo*>::iterator iter = luaContextInfo.begin();
+//      std::map<int, LuaContextInfo*>::iterator end = luaContextInfo.end();
+//      while(iter != end)
+//      {
+//              LuaContextInfo& info = *iter->second;
+		if(/*info.*/ numMemHooks)
+		{
+//                      lua_State* L = info.L;
+			if(LUA)
+			{
+				lua_settop(LUA, 0);
+				lua_getfield(LUA, LUA_REGISTRYINDEX, luaMemHookTypeStrings[hookType]);
+				lua_pushnil(LUA);
+				while(lua_next(LUA, -2))
+				{
+					if(lua_isfunction(LUA, -1))
+					{
+						unsigned int addr = lua_tointeger(LUA, -2);
+						hookedBytes.push_back(addr);
+					}
+					lua_pop(LUA, 1);
+				}
+				lua_settop(LUA, 0);
+			}
+		}
+//              ++iter;
+//      }
+	hookedRegions[hookType].Calculate(hookedBytes);
+}
+
+static void CallRegisteredLuaMemHook_LuaMatch(unsigned int address, int size, unsigned int value, LuaMemHookType hookType)
+{
+//      std::map<int, LuaContextInfo*>::iterator iter = luaContextInfo.begin();
+//      std::map<int, LuaContextInfo*>::iterator end = luaContextInfo.end();
+//      while(iter != end)
+//      {
+//              LuaContextInfo& info = *iter->second;
+		if(/*info.*/ numMemHooks)
+		{
+//                      lua_State* L = info.L;
+			if(LUA/* && !info.panic*/)
+			{
+#ifdef USE_INFO_STACK
+				infoStack.insert(infoStack.begin(), &info);
+				struct Scope { ~Scope(){ infoStack.erase(infoStack.begin()); } } scope;
+#endif
+				lua_settop(LUA, 0);
+				lua_getfield(LUA, LUA_REGISTRYINDEX, luaMemHookTypeStrings[hookType]);
+				for(int i = address; i != address+size; i++)
+				{
+					lua_rawgeti(LUA, -1, i);
+					if (lua_isfunction(LUA, -1))
+					{
+						bool wasRunning = (luaRunning!=0) /*info.running*/;
+						luaRunning /*info.running*/ = true;
+						//RefreshScriptSpeedStatus();
+						lua_pushinteger(LUA, address);
+						lua_pushinteger(LUA, size);
+						int errorcode = lua_pcall(LUA, 2, 0, 0);
+						luaRunning /*info.running*/ = wasRunning;
+						//RefreshScriptSpeedStatus();
+						if (errorcode)
+						{
+							HandleCallbackError(LUA);
+							//int uid = iter->first;
+							//HandleCallbackError(LUA,info,uid,true);
+						}
+						break;
+					}
+					else
+					{
+						lua_pop(LUA,1);
+					}
+				}
+				lua_settop(LUA, 0);
+			}
+		}
+//		++iter;
+//	}
+}
+void CallRegisteredLuaMemHook(unsigned int address, int size, unsigned int value, LuaMemHookType hookType)
+{
+	// performance critical! (called VERY frequently)
+	// I suggest timing a large number of calls to this function in Release if you change anything in here,
+	// before and after, because even the most innocent change can make it become 30% to 400% slower.
+	// a good amount to test is: 100000000 calls with no hook set, and another 100000000 with a hook set.
+	// (on my system that consistently took 200 ms total in the former case and 350 ms total in the latter case)
+	if(hookedRegions[hookType].NotEmpty())
+	{
+		//if((hookType <= LUAMEMHOOK_EXEC) && (address >= 0xE00000))
+		//      address |= 0xFF0000; // account for mirroring of RAM
+		if(hookedRegions[hookType].Contains(address, size))
+			CallRegisteredLuaMemHook_LuaMatch(address, size, value, hookType); // something has hooked this specific address
+	}
+}
+
+void CallRegisteredLuaFunctions(LuaCallID calltype)
+{
+	assert((unsigned int)calltype < (unsigned int)LUACALL_COUNT);
+	const char* idstring = luaCallIDStrings[calltype];
+
+	if (!LUA)
+		return;
+
+	lua_settop(LUA, 0);
+	lua_getfield(LUA, LUA_REGISTRYINDEX, idstring);
+
+	int errorcode = 0;
+	if (lua_isfunction(LUA, -1))
+	{
+		errorcode = lua_pcall(LUA, 0, 0, 0);
+		if (errorcode)
+			HandleCallbackError(LUA);
+	}
+	else
+	{
+		lua_pop(LUA, 1);
+	}
+}
+
 static UINT16 custom_read_word(HWAddressType address) {
 	UINT8 byte0 = RM((address + 0));
 	UINT8 byte1 = RM((address + 1));
@@ -826,36 +1031,177 @@ static int memory_writedword(lua_State *L)
 	return 0;
 }
 
+static int memory_registerHook(lua_State* L, LuaMemHookType hookType, int defaultSize)
+{
+	// get first argument: address
+	unsigned int addr = luaL_checkinteger(L,1);
+	if((addr & ~0xFFFFFFFF) == ~0xFFFFFFFF)
+		addr &= 0xFFFFFFFF;
 
-// memory.registerwrite(int address, function func)
-//
-//  Calls the given function when the indicated memory address is
-//  written to. No args are given to the function. The write has already
-//  occurred, so the new address is readable.
-static int memory_registerwrite(lua_State *L) {
-	// Check args
-	unsigned int addr = luaL_checkinteger(L, 1);
-	
-	// Check the address range
-	if ((addr < 0xc000) || (addr > 0xe000))
-		luaL_error(L, "arg 1 is out of range");
+	// get optional second argument: size
+	int size = defaultSize;
+	int funcIdx = 2;
+	if(lua_isnumber(L,2))
+	{
+		size = luaL_checkinteger(L,2);
+		if(size < 0)
+		{
+			size = -size;
+			addr -= size;
+		}
+		funcIdx++;
+	}
 
-	// Commit it to the registery
-	lua_getfield(L, LUA_REGISTRYINDEX, memoryWatchTable);
-	lua_pushvalue(L,1);
-	lua_pushvalue(L,2);
-	lua_settable(L, -3);
-	lua_getfield(L, LUA_REGISTRYINDEX, memoryValueTable);
-	lua_pushvalue(L,1);
-	if (lua_isnil(L,2)) lua_pushnil(L);
-	else lua_pushinteger(L, RM(addr));
-	lua_settable(L, -3);
-	
-	if(!usingMemoryRegister)
-		usingMemoryRegister=1;
+	// check last argument: callback function
+	bool clearing = lua_isnil(L,funcIdx);
+	if(!clearing)
+		luaL_checktype(L, funcIdx, LUA_TFUNCTION);
+	lua_settop(L,funcIdx);
+
+	// get the address-to-callback table for this hook type of the current script
+	lua_getfield(L, LUA_REGISTRYINDEX, luaMemHookTypeStrings[hookType]);
+
+	// count how many callback functions we'll be displacing
+	int numFuncsAfter = clearing ? 0 : size;
+	int numFuncsBefore = 0;
+	for(unsigned int i = addr; i != addr+size; i++)
+	{
+		lua_rawgeti(L, -1, i);
+		if(lua_isfunction(L, -1))
+			numFuncsBefore++;
+		lua_pop(L,1);
+	}
+
+	// put the callback function in the address slots
+	for(unsigned int i = addr; i != addr+size; i++)
+	{
+		lua_pushvalue(L, -2);
+		lua_rawseti(L, -2, i);
+	}
+
+	// adjust the count of active hooks
+	//LuaContextInfo& info = GetCurrentInfo();
+	/*info.*/ numMemHooks += numFuncsAfter - numFuncsBefore;
+
+	// re-cache regions of hooked memory across all scripts
+	CalculateMemHookRegions(hookType);
+
+	//StopScriptIfFinished(luaStateToUIDMap[L]);
 	return 0;
 }
 
+static int memory_registerwrite(lua_State *L)
+{
+	return memory_registerHook(L, LUAMEMHOOK_WRITE, 1);
+}
+static int memory_registerread(lua_State *L)
+{
+	return memory_registerHook(L, LUAMEMHOOK_READ, 1);
+}
+static int memory_registerexec(lua_State *L)
+{
+	return memory_registerHook(L, LUAMEMHOOK_EXEC, 1);
+}
+
+struct registerPointerMap
+{
+	const char* registerName;
+	unsigned int* pointer;
+	int dataSize;
+};
+
+#define RPM_ENTRY(name,var) {name, (unsigned int*)&var, sizeof(var)},
+
+registerPointerMap z80RegPointerMap [] = {
+	RPM_ENTRY("prvpc", Z80.prvpc.w.l)
+	RPM_ENTRY("pc", Z80.pc.w.l)
+	RPM_ENTRY("sp", Z80.sp.w.l)
+	RPM_ENTRY("af", Z80.af.w.l)
+	RPM_ENTRY("bc", Z80.bc.w.l)
+	RPM_ENTRY("de", Z80.de.w.l)
+	RPM_ENTRY("hl", Z80.hl.w.l)
+	RPM_ENTRY("ix", Z80.ix.w.l)
+	RPM_ENTRY("iy", Z80.iy.w.l)
+	{}
+};
+
+struct cpuToRegisterMap
+{
+	const char* cpuName;
+	registerPointerMap* rpmap;
+}
+cpuToRegisterMaps [] =
+{
+	{"z80.", z80RegPointerMap},
+	{"", z80RegPointerMap},
+};
+
+
+//DEFINE_LUA_FUNCTION(memory_getregister, "cpu_dot_registername_string")
+static int memory_getregister(lua_State *L)
+{
+	const char* qualifiedRegisterName = luaL_checkstring(L,1);
+	lua_settop(L,0);
+	for(int cpu = 0; cpu < sizeof(cpuToRegisterMaps)/sizeof(*cpuToRegisterMaps); cpu++)
+	{
+		cpuToRegisterMap ctrm = cpuToRegisterMaps[cpu];
+		int cpuNameLen = strlen(ctrm.cpuName);
+		if(!strnicmp(qualifiedRegisterName, ctrm.cpuName, cpuNameLen))
+		{
+			qualifiedRegisterName += cpuNameLen;
+			for(int reg = 0; ctrm.rpmap[reg].dataSize; reg++)
+			{
+				registerPointerMap rpm = ctrm.rpmap[reg];
+				if(!stricmp(qualifiedRegisterName, rpm.registerName))
+				{
+					switch(rpm.dataSize)
+					{ default:
+					case 1: lua_pushinteger(L, *(unsigned char*)rpm.pointer); break;
+					case 2: lua_pushinteger(L, *(unsigned short*)rpm.pointer); break;
+					case 4: lua_pushinteger(L, *(unsigned long*)rpm.pointer); break;
+					}
+					return 1;
+				}
+			}
+			lua_pushnil(L);
+			return 1;
+		}
+	}
+	lua_pushnil(L);
+	return 1;
+}
+//DEFINE_LUA_FUNCTION(memory_setregister, "cpu_dot_registername_string,value")
+static int memory_setregister(lua_State *L)
+{
+	const char* qualifiedRegisterName = luaL_checkstring(L,1);
+	unsigned long value = (unsigned long)(luaL_checkinteger(L,2));
+	lua_settop(L,0);
+	for(int cpu = 0; cpu < sizeof(cpuToRegisterMaps)/sizeof(*cpuToRegisterMaps); cpu++)
+	{
+		cpuToRegisterMap ctrm = cpuToRegisterMaps[cpu];
+		int cpuNameLen = strlen(ctrm.cpuName);
+		if(!strnicmp(qualifiedRegisterName, ctrm.cpuName, cpuNameLen))
+		{
+			qualifiedRegisterName += cpuNameLen;
+			for(int reg = 0; ctrm.rpmap[reg].dataSize; reg++)
+			{
+				registerPointerMap rpm = ctrm.rpmap[reg];
+				if(!stricmp(qualifiedRegisterName, rpm.registerName))
+				{
+					switch(rpm.dataSize)
+					{ default:
+					case 1: *(unsigned char*)rpm.pointer = (unsigned char)(value & 0xFF); break;
+					case 2: *(unsigned short*)rpm.pointer = (unsigned short)(value & 0xFFFF); break;
+					case 4: *(unsigned long*)rpm.pointer = value; break;
+					}
+					return 0;
+				}
+			}
+			return 0;
+		}
+	}
+	return 0;
+}
 
 // table joypad.read()
 //
@@ -1910,6 +2256,18 @@ static int gui_parsecolor(lua_State *L)
 	return 4;
 }
 
+
+// gui.savescreenshot()
+//
+// Causes DEGA to write a screenshot to a file as if the user pressed the associated hotkey.
+//
+// Unconditionally returns 1; any failure in taking a screenshot would be reported on-screen
+// from the function ShotSave().
+static int gui_savescreenshot(lua_State *L) {
+	if (LoopPause==0) { ShotStart(); RunFrame(1,NULL); }
+	ShotSave();
+	return 1;
+}
 
 // gui.gdscreenshot()
 //
@@ -3115,26 +3473,6 @@ static void DEGA_LuaHookFunction(lua_State *L, lua_Debug *dbg) {
 }
 
 
-void HandleCallbackError(lua_State* L)
-{
-	if(L->errfunc || L->errorJmp)
-		luaL_error(L, "%s", lua_tostring(L,-1));
-	else {
-		lua_pushnil(LUA);
-		lua_setfield(LUA, LUA_REGISTRYINDEX, guiCallbackTable);
-
-		// Error?
-#ifdef WIN32
-		MessageBox(hFrameWnd, lua_tostring(LUA,-1), "Lua run error", MB_OK | MB_ICONSTOP);
-#else
-		dega_printf_info("Lua thread bombed out: %s\n", lua_tostring(LUA,-1));
-#endif
-
-		DEGA_LuaStop();
-	}
-}
-
-
 void CallExitFunction() {
 	int errorcode = 0;
 
@@ -3153,33 +3491,6 @@ void CallExitFunction() {
 
 	if (errorcode)
 		HandleCallbackError(LUA);
-}
-
-
-void CallRegisteredLuaFunctions(int calltype)
-{
-	const char* idstring;
-	int errorcode = 0;
-
-	assert((unsigned int)calltype < (unsigned int)LUACALL_COUNT);
-	idstring = luaCallIDStrings[calltype];
-
-	if (!LUA)
-		return;
-
-	lua_settop(LUA, 0);
-	lua_getfield(LUA, LUA_REGISTRYINDEX, idstring);
-
-	if (lua_isfunction(LUA, -1))
-	{
-		errorcode = lua_pcall(LUA, 0, 0, 0);
-		if (errorcode)
-			HandleCallbackError(LUA);
-	}
-	else
-	{
-		lua_pop(LUA, 1);
-	}
 }
 
 
@@ -3229,8 +3540,12 @@ static const struct luaL_reg memorylib [] = {
 
 	// memory hooks
 	{"registerwrite", memory_registerwrite},
-	// alternate names
-	{"register", memory_registerwrite},
+	{"registerread", memory_registerread},
+	{"registerexec", memory_registerexec},
+
+	// registers
+	{"getregister", memory_getregister},
+	{"setregister", memory_setregister},
 
 	{NULL,NULL}
 };
@@ -3282,6 +3597,7 @@ static const struct luaL_reg guilib[] = {
 	{"transparency", gui_transparency},
 	{"popup", gui_popup},
 	{"parsecolor", gui_parsecolor},
+	{"savescreenshot", gui_savescreenshot},
 	{"gdscreenshot", gui_gdscreenshot},
 	{"gdoverlay", gui_gdoverlay},
 	{"getpixel", gui_getpixel},
@@ -3379,8 +3695,6 @@ int DEGA_LoadLuaCode(const char *filename) {
 	char dir[MAX_PATH];
 	char *slash, *backslash;
 
-	usingMemoryRegister=0;
-
 	if (filename != luaScriptName)
 	{
 		if (luaScriptName) free(luaScriptName);
@@ -3399,6 +3713,7 @@ int DEGA_LoadLuaCode(const char *filename) {
 	}
 	_getcwd(luaCWD, MAX_PATH);
 
+	DEGA_LuaStop();
 	if (!LUA) {
 		LUA = lua_open();
 		luaL_openlibs(LUA);
@@ -3429,10 +3744,12 @@ int DEGA_LoadLuaCode(const char *filename) {
 
 		luabitop_validate(LUA);
 
-		lua_newtable(LUA);
-		lua_setfield(LUA, LUA_REGISTRYINDEX, memoryWatchTable);
-		lua_newtable(LUA);
-		lua_setfield(LUA, LUA_REGISTRYINDEX, memoryValueTable);
+		// push arrays for storing hook functions in
+		for(int i = 0; i < LUAMEMHOOK_COUNT; i++)
+		{
+			lua_newtable(LUA);
+			lua_setfield(LUA, LUA_REGISTRYINDEX, luaMemHookTypeStrings[i]);
+		}
 	}
 
 	// We make our thread NOW because we want it at the bottom of the stack.
@@ -3466,6 +3783,7 @@ int DEGA_LoadLuaCode(const char *filename) {
 	// Initialize settings
 	luaRunning = TRUE;
 	skipRerecords = FALSE;
+	numMemHooks = 0;
 	transparencyModifier = 255; // opaque
 	lua_joypads_used = 0; // not used
 
@@ -3523,6 +3841,10 @@ void DEGA_LuaStop() {
 
 	//execute the user's shutdown callbacks
 	CallExitFunction();
+
+	/*info.*/numMemHooks = 0;
+	for(int i = 0; i < LUAMEMHOOK_COUNT; i++)
+		CalculateMemHookRegions((LuaMemHookType)i);
 
 	if (info_onstop)
 		info_onstop(info_uid);

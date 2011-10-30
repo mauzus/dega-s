@@ -18,7 +18,17 @@ enum LuaCallID
 
 	LUACALL_COUNT
 };
-void CallRegisteredLuaFunctions(int calltype);
+void CallRegisteredLuaFunctions(LuaCallID calltype);
+
+enum LuaMemHookType
+{
+	LUAMEMHOOK_WRITE,
+	LUAMEMHOOK_READ,
+	LUAMEMHOOK_EXEC,
+
+	LUAMEMHOOK_COUNT
+};
+void CallRegisteredLuaMemHook(unsigned int address, int size, unsigned int value, LuaMemHookType hookType);
 
 //void DEGA_LuaWrite(UINT32 addr);
 void DEGA_LuaFrameBoundary();
@@ -35,8 +45,6 @@ int DEGA_LuaSpeed();
 int DEGA_LuaRerecordCountSkip();
 
 void DEGA_LuaGui(unsigned char *s, int width, int height, int bpp, int pitch);
-
-void DEGA_LuaWriteInform();
 
 void DEGA_LuaClearGui();
 void DEGA_LuaEnableGui(u8 enabled);
