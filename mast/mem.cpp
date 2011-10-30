@@ -207,12 +207,20 @@ void DozeWrite(unsigned short a, unsigned char d) { SysWrite(a,d); }
 
 #elif defined(EMU_Z80JB)
 
-static unsigned char __fastcall ReadIoHandler(unsigned int a)          { if (0) printf("ReadIoHandler (0x%x, PC=%x)\n", a, Z80.pc.w.l); return SysIn(a); }
-static void __fastcall WriteIoHandler(unsigned int a, unsigned char v) { SysOut(a,v); }
+static unsigned char __fastcall ReadIoHandler(unsigned int a) {
+  if (0) printf("ReadIoHandler (0x%x, PC=%x)\n", a, Z80.pc.w.l);
+  CallRegisteredLuaMemHook(a, 1, 0, LUAMEMHOOK_READ);
+  return SysIn(a);
+}
+static void __fastcall WriteIoHandler(unsigned int a, unsigned char v) {
+  CallRegisteredLuaMemHook(a, 1, v, LUAMEMHOOK_WRITE);
+  SysOut(a,v);
+}
 
 static unsigned char __fastcall ReadProgHandler(unsigned int a)
 {
   if (0) printf("ReadProgHandler (0x%x, PC=%x)\n", a, Z80.pc.w.l);
+  CallRegisteredLuaMemHook(a, 1, 0, LUAMEMHOOK_READ);
   if (MemRead[a >> 8])
     return MemRead[a >> 8][a];
   else
@@ -221,10 +229,21 @@ static unsigned char __fastcall ReadProgHandler(unsigned int a)
 
 static void __fastcall WriteProgHandler(unsigned int a, unsigned char v)
 {
+  CallRegisteredLuaMemHook(a, 1, v, LUAMEMHOOK_WRITE);
   if (MemWrite[a >> 8])
     MemWrite[a >> 8][a] = v;
   else
     SysWrite(a,v);
+}
+
+static unsigned char __fastcall ReadProgHandlerOp(unsigned int a)
+{
+  if (0) printf("ReadProgHandlerOp (0x%x, PC=%x)\n", a, Z80.pc.w.l);
+  CallRegisteredLuaMemHook(a, 1, 0, LUAMEMHOOK_EXEC);
+  if (MemRead[a >> 8])
+    return MemRead[a >> 8][a];
+  else
+    return SysRead(a);
 }
 
 void MastSetMemHandlers()
@@ -233,8 +252,8 @@ void MastSetMemHandlers()
   Z80SetIOWriteHandler(WriteIoHandler);
   Z80SetProgramReadHandler(ReadProgHandler);
   Z80SetProgramWriteHandler(WriteProgHandler);
-  Z80SetCPUOpReadHandler(ReadProgHandler);
-  Z80SetCPUOpArgReadHandler(ReadProgHandler);
+  Z80SetCPUOpReadHandler(ReadProgHandlerOp);
+  Z80SetCPUOpArgReadHandler(ReadProgHandlerOp);
 
   LuaSetProgramReadHandler(ReadProgHandler);
   LuaSetProgramWriteHandler(WriteProgHandler);
