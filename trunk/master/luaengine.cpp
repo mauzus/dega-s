@@ -28,6 +28,7 @@ extern "C" {
 #include "app.h"
 #include "luasav.h"
 #include "../z80jb/z80.h"
+#include <mastint.h>
 #ifdef WIN32
 #include <direct.h>
 #include <windows.h>
@@ -143,21 +144,8 @@ static const char* luaMemHookTypeStrings [] =
 
 static std::string empty_driver("empty");
 
-static LuaReadProgHandler LuaProgramRead;
-static LuaWriteProgHandler LuaProgramWrite;
-
-void LuaSetProgramReadHandler(LuaReadProgHandler handler)
-{
-	LuaProgramRead = handler;
-}
-
-void LuaSetProgramWriteHandler(LuaWriteProgHandler handler)
-{
-	LuaProgramWrite = handler;
-}
-
-#define RM(addr) (uint8_t)LuaProgramRead(addr)
-#define WM(addr,value) LuaProgramWrite(addr,value)
+#define RM(addr) (uint8_t)MemRead[addr >> 8][addr]
+#define WM(addr,value) MemRead[addr >> 8][addr] = value;
 
 /**
  * Resets emulator speed / pause states after script exit.
