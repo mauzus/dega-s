@@ -254,9 +254,6 @@ void MastSetMemHandlers()
   Z80SetProgramWriteHandler(WriteProgHandler);
   Z80SetCPUOpReadHandler(ReadProgHandlerOp);
   Z80SetCPUOpArgReadHandler(ReadProgHandlerOp);
-
-  LuaSetProgramReadHandler(ReadProgHandler);
-  LuaSetProgramWriteHandler(WriteProgHandler);
 }
 
 #endif
