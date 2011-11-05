@@ -1,4 +1,6 @@
 #DEBUG_SYM=1
+#PROFILE_GENERATE=1
+#PROFILE_USE=1
 
 ifndef DEBUG_SYM
 	OPTFLAGS=-O3 -fomit-frame-pointer -funroll-loops -Wall
@@ -51,8 +53,12 @@ endif
 ifdef DEBUG_SYM
 	CFLAGS  += -ggdb
 endif
-#CFLAGS  += -fprofile-generate
-#CFLAGS  += -fprofile-use
+ifdef PROFILE_GENERATE
+	CFLAGS  += -fprofile-generate
+endif
+ifdef PROFILE_USE
+	CFLAGS  += -fprofile-use
+endif
 
 CXXFLAGS= $(CFLAGS) -fno-exceptions
 
@@ -88,6 +94,10 @@ else ifeq ($(P),win)
 	EXTRA_LDFLAGS = -specs=specs -mno-cygwin -static
 	GUI_LDFLAGS = -Wl,--subsystem,windows
 	SPECS = specs
+endif
+
+ifdef PROFILE_GENERATE
+	EXTRA_LDFLAGS  += -fprofile-arcs
 endif
 
 ALLOBJ = dega-s$(EXEEXT) # mmvconv$(EXEEXT) degavi$(EXEEXT)
