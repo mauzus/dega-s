@@ -146,7 +146,6 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 		}
 
 		DragAcceptFiles(hDlg, true);
-		SetDlgItemText(hDlg, IDC_EDIT_LUAPATH, DEGA_GetLuaScriptName());
 
 		SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &LuaConsoleLogFont, 0); // reset with an acceptable font
 		return true;
@@ -332,9 +331,9 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 		fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
 		if (fileCount > 0) {
 			DragQueryFile(hDrop, 0, filename, MAX_PATH);
-			SetWindowText(GetDlgItem(hDlg, IDC_EDIT_LUAPATH), filename);
 		}
 		DragFinish(hDrop);
+		DEGA_LoadLuaCode(filename);
 		return true;
 	}	break;
 
