@@ -69,6 +69,8 @@ void WinLuaOnStart(int hDlgAsInt)
 	SetWindowText(GetDlgItem(hDlg, IDC_BUTTON_LUARUN), "Restart");
 	SetWindowText(GetDlgItem(hDlg, IDC_LUACONSOLE), ""); // clear the console
 //	Show_Genesis_Screen(HWnd); // otherwise we might never show the first thing the script draws
+
+	SetDlgItemText(hDlg, IDC_EDIT_LUAPATH, DEGA_GetLuaScriptName());
 }
 
 void WinLuaOnStop(int hDlgAsInt)
@@ -132,7 +134,7 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 			r.left -= width2;
 		}
 
-		SetWindowPos(hDlg, NULL, r.left, r.top, NULL, NULL, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
+		SetWindowPos(hDlg, NULL, r.left, r.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
 
 		RECT r3;
 		GetClientRect(hDlg, &r3);

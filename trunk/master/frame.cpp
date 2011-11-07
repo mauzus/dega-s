@@ -1,12 +1,129 @@
 #include "app.h"
+#include <string>
 
-static char *ClassName="Frame";
+static const char *ClassName="Frame";
 HWND hFrameWnd=NULL; // Frame - Window handle
 HMENU hFrameMenu=NULL;
 HWND hFrameStatus=NULL; // Frame - status window
 DWORD MoveOK=0;
 
 UINT32 mousex,mousey;
+
+//Recent Lua Menu ----------------------------------------
+static HMENU recentluamenu;   //Recent Lua Files Menu
+char *recent_lua[] = {0,0,0,0,0};
+const unsigned int LUA_FIRST_RECENT_FILE = 50000;
+const unsigned int MAX_NUMBER_OF_LUA_RECENT_FILES = sizeof(recent_lua)/sizeof(*recent_lua);
+
+void UpdateLuaRMenu(HMENU menu, char **strs, unsigned int mitem, unsigned int baseid)
+{
+	MENUITEMINFO moo;
+	int x;
+
+	moo.cbSize = sizeof(moo);
+	moo.fMask = MIIM_SUBMENU | MIIM_STATE;
+
+	GetMenuItemInfo(hFrameMenu, mitem, FALSE, &moo);
+	moo.hSubMenu = menu;
+	moo.fState = strs[0] ? MFS_ENABLED : MFS_GRAYED;
+
+	SetMenuItemInfo(hFrameMenu, mitem, FALSE, &moo);
+
+	// Remove all recent files submenus
+	for(x = 0; x < MAX_NUMBER_OF_LUA_RECENT_FILES; x++)
+	{
+		RemoveMenu(menu, baseid + x, MF_BYCOMMAND);
+	}
+
+	// Recreate the menus
+	for(x = MAX_NUMBER_OF_LUA_RECENT_FILES - 1; x >= 0; x--)
+	{
+		// Skip empty strings
+		if(!strs[x])
+			continue;
+
+		std::string tmp = strs[x];
+		
+		//clamp this string to 128 chars
+		if(tmp.size()>128)
+			tmp = tmp.substr(0,128);
+
+		moo.cbSize = sizeof(moo);
+		moo.fMask = MIIM_DATA | MIIM_ID | MIIM_TYPE;
+		
+		// Insert the menu item
+		moo.cch = tmp.size();
+		moo.fType = 0;
+		moo.wID = baseid + x;
+		moo.dwTypeData = (LPSTR)tmp.c_str();
+		InsertMenuItem(menu, 0, 1, &moo);
+	}
+
+	DrawMenuBar(hFrameWnd);
+}
+
+void UpdateRecentLuaArray(const char* addString, char** bufferArray, unsigned int arrayLen, HMENU menu, unsigned int menuItem, unsigned int baseId)
+{
+	// Try to find out if the filename is already in the recent files list.
+	for(unsigned int x = 0; x < arrayLen; x++)
+	{
+		if(bufferArray[x])
+		{
+			if(!strcmp(bufferArray[x], addString))    // Item is already in list.
+			{
+				// If the filename is in the file list don't add it again.
+				// Move it up in the list instead.
+
+				int y;
+				char *tmp;
+
+				// Save pointer.
+				tmp = bufferArray[x];
+
+				for(y = x; y; y--)
+				{
+					// Move items down.
+					bufferArray[y] = bufferArray[y - 1];
+				}
+
+				// Put item on top.
+				bufferArray[0] = tmp;
+
+				// Update the recent files menu
+				UpdateLuaRMenu(menu, bufferArray, menuItem, baseId);
+
+				return;
+			}
+		}
+	}
+
+	// The filename wasn't found in the list. That means we need to add it.
+
+	// If there's no space left in the recent files list, get rid of the last
+	// item in the list.
+	if(bufferArray[arrayLen - 1])
+	{
+		free(bufferArray[arrayLen - 1]);
+	}
+
+	// Move the other items down.
+	for(unsigned int x = arrayLen - 1; x; x--)
+	{
+		bufferArray[x] = bufferArray[x - 1];
+	}
+
+	// Add the new item.
+	bufferArray[0] = (char*)malloc(strlen(addString) + 1); //mbg merge 7/17/06 added cast
+	strcpy(bufferArray[0], addString);
+
+	// Update the recent files menu
+	UpdateLuaRMenu(menu, bufferArray, menuItem, baseId);
+}
+
+void AddRecentLuaFile(const char *filename)
+{
+	UpdateRecentLuaArray(filename, recent_lua, MAX_NUMBER_OF_LUA_RECENT_FILES, recentluamenu, MENU_LUA_RECENT, LUA_FIRST_RECENT_FILE); 
+}
 
 // The window procedure
 static LRESULT CALLBACK WindowProc(HWND hWnd,UINT Msg,WPARAM wParam,LPARAM lParam)
@@ -71,6 +188,14 @@ static LRESULT CALLBACK WindowProc(HWND hWnd,UINT Msg,WPARAM wParam,LPARAM lPara
     if (Item==ID_VIDEO_PROPERTIES) { VideoProperties(); return 0; }
     if (Item==ID_INPUT_KEYMAPPING) { KeyMapping(); return 0; }
 
+		if(wParam >= LUA_FIRST_RECENT_FILE && wParam <= LUA_FIRST_RECENT_FILE + MAX_NUMBER_OF_LUA_RECENT_FILES - 1)
+		{
+			char*& fname = recent_lua[wParam - LUA_FIRST_RECENT_FILE];
+			if(fname)
+			{
+				DEGA_LoadLuaCode(fname);
+			}
+		}
 		if (Item==ID_LUA_OPEN) {
 			if(!LuaConsoleHWnd) {
 				LuaConsoleHWnd = CreateDialog(hAppInst, MAKEINTRESOURCE(IDD_LUA), NULL, (DLGPROC) DlgLuaScriptDialog);
@@ -129,6 +254,10 @@ int FrameInit()
 
   // Load the menu from the resource
   hFrameMenu=LoadMenu(hAppInst,MAKEINTRESOURCE(IDR_MENU1));
+
+  recentluamenu = CreateMenu();
+  UpdateLuaRMenu(recentluamenu, recent_lua, MENU_LUA_RECENT, LUA_FIRST_RECENT_FILE);
+
   return 0;
 }
 

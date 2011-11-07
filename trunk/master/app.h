@@ -124,6 +124,8 @@ int FrameSize();
 extern HWND hFrameStatus; // Frame - status window
 extern int SizeMultiplier;
 extern DWORD MoveOK;
+void AddRecentLuaFile(const char *filename);
+extern char *recent_lua[];
 
 // input.cpp
 extern int UseJoystick;
