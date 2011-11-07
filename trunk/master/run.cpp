@@ -39,7 +39,7 @@ int RunFrame(int Draw,short *pSound)
 	if(DEGA_LuaUsingJoypad(0)) MastInput[0] = DEGA_LuaReadJoypad(0);
 	if(DEGA_LuaUsingJoypad(1)) MastInput[1] = DEGA_LuaReadJoypad(1);
 
-  MastDrawDo=Draw; pMsndOut=pSound;
+  pMsndOut=pSound;
 
   CallRegisteredLuaFunctions(LUACALL_BEFOREEMULATION); //TODO: find proper place
 
@@ -57,11 +57,11 @@ int RunFrame(int Draw,short *pSound)
   }
   RunPostChangeStatus();
 
-  if (Draw) DispDraw();
-
   Update_RAM_Search();
   DEGA_LuaFrameBoundary();
   CallRegisteredLuaFunctions(LUACALL_AFTEREMULATION); //TODO: find proper place
+
+  if (Draw) DispDraw();
 
   return 0;
 }

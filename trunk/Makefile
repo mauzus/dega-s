@@ -6,7 +6,9 @@ ifndef DEBUG_SYM
 	OPTFLAGS=-O3 -fomit-frame-pointer -funroll-loops -Wall
 #	OPTFLAGS=-O3 -fomit-frame-pointer -funroll-loops -march=i686 -mcpu=i686
 #	OPTFLAGS=-xM -O3
+ifndef PROFILE_GENERATE
 	STRIP = strip
+endif
 endif
 
 CC=gcc
@@ -35,7 +37,7 @@ endif
 ifeq ($(P),unix)
 	CFLAGS= $(OPTFLAGS) $(shell sdl-config --cflags) -DUSE_MENCODER -Imast -Idoze -Ilibmencoder -D__cdecl= -D__fastcall= -Iliblua
 else ifeq ($(P),win)
-	CFLAGS= $(OPTFLAGS) -DUSE_VFW -mno-cygwin -Imast -Idoze -Imaster -Iextra -Izlib -Ilibvfw -Iliblua
+	CFLAGS= $(OPTFLAGS) -DUSE_VFW -Imast -Idoze -Imaster -Iextra -Izlib -Ilibvfw -Iliblua
 endif
 
 ifndef Z80
@@ -81,7 +83,6 @@ endif
 	ENCODER_LDFLAGS = -lm
 	EXTRA_LDFLAGS =
 	GUI_LDFLAGS =
-	SPECS =
 else ifeq ($(P),win)
 	NASM_FORMAT = win32
 	EXEEXT = .exe
@@ -91,9 +92,8 @@ else ifeq ($(P),win)
 	ENCODER_OBJ = tools/wdegavi.o tools/degavirc.o
 	ENCODER_LIBS = libvfw/libvfw.a
 	ENCODER_LDFLAGS = -lcomdlg32 -lvfw32 -lmsacm32 -lole32 -lm -Wl,--subsystem,windows
-	EXTRA_LDFLAGS = -specs=specs -mno-cygwin -static
+	EXTRA_LDFLAGS = -static
 	GUI_LDFLAGS = -Wl,--subsystem,windows
-	SPECS = specs
 endif
 
 ifdef PROFILE_GENERATE
@@ -148,7 +148,7 @@ all:
 
 endif
 
-dega-s$(EXEEXT): $(PLATOBJ) $(Z80OBJ) $(MASTOBJ) $(SPECS)
+dega-s$(EXEEXT): $(PLATOBJ) $(Z80OBJ) $(MASTOBJ)
 	$(CXX) $(EXTRA_LDFLAGS) $(GUI_LDFLAGS) -o dega-s$(EXEEXT) $(PLATOBJ) $(Z80OBJ) $(MASTOBJ) $(EXTRA_LIBS)
 ifdef STRIP
 	$(STRIP) dega-s$(EXEEXT)
@@ -157,7 +157,7 @@ endif
 degavi$(EXEEXT): tools/avioutput.o $(ENCODER_OBJ) $(Z80OBJ) $(MASTOBJ) $(ENCODER_LIBS)
 	$(CC) $(EXTRA_LDFLAGS) -o degavi$(EXEEXT) tools/avioutput.o $(ENCODER_OBJ) $(Z80OBJ) $(MASTOBJ) $(ENCODER_LIBS) $(ENCODER_LDFLAGS)
 
-mmvconv$(EXEEXT): tools/mmvconv.o $(SPECS)
+mmvconv$(EXEEXT): tools/mmvconv.o
 	$(CC) $(EXTRA_LDFLAGS) -o mmvconv$(EXEEXT) tools/mmvconv.o
 
 doze/dozea.o: doze/dozea.asm
@@ -176,11 +176,8 @@ master/app.o: master/app.rc
 tools/degavirc.o: tools/degavirc.rc
 	cd tools && $(WINDRES) -o degavirc.o degavirc.rc
 
-specs:
-	$(CXX) -dumpspecs | sed -e "s/-lmsvcrt/-lmsvcr71/g" > specs
-
 clean:
-	rm -f $(Z80OBJ) $(DAMOBJ) $(MASTOBJ) $(PLATOBJ) tools/avioutput.o tools/degavi.o tools/degavirc.o tools/mmvconv.o tools/wdegavi.o doze/dozea.asm* doze/dam doze/dam.exe dega dega.exe degavi degavi.exe mmvconv mmvconv.exe specs
+	rm -f $(Z80OBJ) $(DAMOBJ) $(MASTOBJ) $(PLATOBJ) tools/avioutput.o tools/degavi.o tools/degavirc.o tools/mmvconv.o tools/wdegavi.o doze/dozea.asm* doze/dam doze/dam.exe dega dega.exe degavi degavi.exe mmvconv mmvconv.exe
 	make -Czlib clean
 	make -Clibmencoder clean
 	make -Clibvfw clean
