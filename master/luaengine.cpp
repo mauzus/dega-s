@@ -145,7 +145,7 @@ static const char* luaMemHookTypeStrings [] =
 static std::string empty_driver("empty");
 
 #define RM(addr) (uint8_t)MemRead[addr >> 8][addr]
-#define WM(addr,value) MemRead[addr >> 8][addr] = value;
+#define WM(addr,value) MemRead[addr >> 8][addr] = value
 
 /**
  * Resets emulator speed / pause states after script exit.
@@ -694,7 +694,7 @@ void HandleCallbackError(lua_State* L)
 
 		// Error?
 #ifdef WIN32
-		MessageBox(hFrameWnd, lua_tostring(L,-1), "Lua run error", MB_OK | MB_ICONSTOP);
+		MessageBox(LuaConsoleHWnd, lua_tostring(L,-1), "Lua run error", MB_OK | MB_ICONSTOP);
 #else
 		fprintf(stderr, "Lua thread bombed out: %s\n", lua_tostring(L,-1));
 #endif
@@ -3428,7 +3428,7 @@ static void DEGA_LuaHookFunction(lua_State *L, lua_Debug *dbg) {
 
 #ifdef WIN32
 		// Uh oh
-		int ret = MessageBox(hFrameWnd, "The Lua script running has been running a long time. It may have gone crazy. Kill it?\n\n(No = don't check anymore either)", "Lua Script Gone Nuts?", MB_YESNO);
+		int ret = MessageBox(LuaConsoleHWnd, "The Lua script running has been running a long time. It may have gone crazy. Kill it?\n\n(No = don't check anymore either)", "Lua Script Gone Nuts?", MB_YESNO);
 		
 		if (ret == IDYES) {
 			kill = 1;
@@ -3649,7 +3649,7 @@ void DEGA_LuaFrameBoundary() {
 		
 		// Error?
 #ifdef WIN32
-		MessageBox(hFrameWnd, lua_tostring(thread,-1), "Lua run error", MB_OK | MB_ICONSTOP);
+		MessageBox(LuaConsoleHWnd, lua_tostring(thread,-1), "Lua run error", MB_OK | MB_ICONSTOP);
 #else
 		dega_printf_info("Lua thread bombed out: %s\n", lua_tostring(thread,-1));
 #endif
@@ -3715,7 +3715,6 @@ int DEGA_LoadLuaCode(const char *filename) {
 		luaL_register(LUA, "gui", guilib);
 		luaL_register(LUA, "input", inputlib);
 		luaL_register(LUA, "bit", bit_funcs); // LuaBitOp library
-		lua_settop(LUA, 0); // clean the stack, because each call to luaL_register leaves a table on top
 
 		// register a few utility functions outside of libraries (in the global namespace)
 		lua_register(LUA, "print", print);
@@ -3729,6 +3728,8 @@ int DEGA_LoadLuaCode(const char *filename) {
 		lua_register(LUA, "XOR", bit_bxor);
 		lua_register(LUA, "SHIFT", bit_bshift_emulua);
 		lua_register(LUA, "BIT", bitbit);
+
+		lua_settop(LUA, 0); // clean the stack, because each call to luaL_register leaves a table on top
 
 		luabitop_validate(LUA);
 
@@ -3744,13 +3745,13 @@ int DEGA_LoadLuaCode(const char *filename) {
 	// If all goes wrong, we let the garbage collector remove it.
 	thread = lua_newthread(LUA);
 	
-	// Load the data	
+	// Load the data
 	result = luaL_loadfile(LUA,filename);
 
 	if (result) {
 #ifdef WIN32
 		// Doing this here caused nasty problems; reverting to MessageBox-from-dialog behavior.
-		MessageBox(NULL, lua_tostring(LUA,-1), "Lua load error", MB_OK | MB_ICONSTOP);
+		MessageBox(LuaConsoleHWnd, lua_tostring(LUA,-1), "Lua load error", MB_OK | MB_ICONSTOP);
 #else
 		dega_printf_info("Failed to compile file: %s\n", lua_tostring(LUA,-1));
 #endif
@@ -3900,6 +3901,9 @@ int DEGA_LuaRerecordCountSkip() {
 }
 
 void DEGA_LuaGui(unsigned char *s, int width, int height, int bpp, int pitch) {
+	if (!LUA)
+		return;
+
 	XBuf = s;
 
 	iScreenBpp    = bpp;
@@ -3908,9 +3912,6 @@ void DEGA_LuaGui(unsigned char *s, int width, int height, int bpp, int pitch) {
 	LUA_SCREEN_WIDTH  = width;
 	LUA_SCREEN_HEIGHT = height;
 
-//	if (!LUA || !bDrvOkay/* || !luaRunning*/)
-	if (!LUA)
-		return;
 
 //	char msg[40];
 //	snprintf(msg, sizeof(msg), "x:%d y:%d d:%d p:%d\n",width,height,bpp,pitch);
@@ -3929,7 +3930,7 @@ void DEGA_LuaGui(unsigned char *s, int width, int height, int bpp, int pitch) {
 		ret = lua_pcall(LUA, 0, 0, 0);
 		if (ret != 0) {
 #ifdef WIN32
-			MessageBox(hFrameWnd, lua_tostring(LUA, -1), "Lua Error in GUI function", MB_OK);
+			MessageBox(LuaConsoleHWnd, lua_tostring(LUA, -1), "Lua Error in GUI function", MB_OK);
 #else
 			fprintf(stderr, "Lua error in gui.register function: %s\n", lua_tostring(LUA, -1));
 #endif

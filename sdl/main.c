@@ -436,7 +436,6 @@ int main(int argc, char** argv)
 		pMsndOut=NULL;
 	}
 
-	MastDrawDo=1;
 	while(!done)
 	{
 		if (!paused || frameadvance)

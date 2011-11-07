@@ -13,8 +13,6 @@ unsigned int MastVer=0x20 | MAST_CORE; // Version number of the library (lower 1
 unsigned char MastInput[2]={0,0}; // Joypads
 unsigned int MastEx=0; // Extra options
 
-int MastDrawDo=0; // 1 to draw image
-
 struct Masta Masta={0};
 struct Mastb *pMastb=NULL;
 struct Mastz Mastz={0};

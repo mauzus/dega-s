@@ -36,7 +36,6 @@ extern unsigned int MastEx; // Extra options
 #define MX_FMCHIP (8) // Emulate FM chip
 #define MX_SRAM  (16) // Save/load SRAM in save state
 
-extern int MastDrawDo; // 1 to draw image
 int MastInit();
 int MastExit();
 int MastSetRom(unsigned char *Rom,int RomLen);
