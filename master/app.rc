@@ -179,6 +179,7 @@ BEGIN
     BEGIN
         POPUP "Lua Scripting..."
         BEGIN
+          MENUITEM "&Recent",                              MENU_LUA_RECENT
           MENUITEM "&New Lua Script Window...",            ID_LUA_OPEN
           MENUITEM "&Close All Script Windows",            ID_LUA_CLOSE_ALL, GRAYED
         END

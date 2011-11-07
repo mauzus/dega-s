@@ -45,12 +45,12 @@ extern "C" {
 #define inline __inline
 #endif
 
-static void(*info_print)(int uid, const char* str);
-static void(*info_onstart)(int uid);
-static void(*info_onstop)(int uid);
-static int info_uid;
+static void(*info_print)(int uid, const char* str) = NULL;
+static void(*info_onstart)(int uid) = NULL;
+static void(*info_onstop)(int uid) = NULL;
+static int info_uid = 0;
 
-static lua_State *LUA;
+static lua_State *LUA = NULL;
 
 // Screen
 //if (MastEx&MX_GG) { ScrnWidth=160; ScrnHeight=144; } // Game gear
@@ -66,7 +66,7 @@ static int LUA_SCREEN_HEIGHT = 192;
 static char luaCWD [MAX_PATH] = {0};
 
 // Are we running any code right now?
-static char *luaScriptName = NULL;
+static char luaScriptName [_MAX_PATH] = {0};
 
 // Are we running any code right now?
 static int luaRunning = FALSE;
@@ -91,8 +91,8 @@ static int frameAdvanceWaiting = FALSE;
 static int transparencyModifier = 255;
 
 // Our joypads.
-static int lua_joypads[2];
-static UINT8 lua_joypads_used;
+static int lua_joypads[2] = {0, 0};
+static UINT8 lua_joypads_used = 0;
 static const char *button_mappings[] = {
 	"up","down","left","right","1","2","null","start"
 };
@@ -104,10 +104,10 @@ static UINT8 *gui_data = NULL;
 // Protects Lua calls from going nuts.
 // We set this to a big number like 1000 and decrement it
 // over time. The script gets knifed once this reaches zero.
-static int numTries;
+static int numTries = 0;
 
 // number of registered memory functions (1 per hooked byte)
-static unsigned int numMemHooks;
+static unsigned int numMemHooks = 0;
 
 #ifdef _MSC_VER
 	#define snprintf _snprintf
@@ -3683,11 +3683,8 @@ int DEGA_LoadLuaCode(const char *filename) {
 	char dir[MAX_PATH];
 	char *slash, *backslash;
 
-	if (filename != luaScriptName)
-	{
-		if (luaScriptName) free(luaScriptName);
-		luaScriptName = strdup(filename);
-	}
+	strncpy(luaScriptName, filename, _MAX_PATH);
+	luaScriptName[_MAX_PATH-1] = '\0';
 
 	// Set current directory from filename (for dofile)
 	strcpy(dir, filename);
@@ -3729,9 +3726,9 @@ int DEGA_LoadLuaCode(const char *filename) {
 		lua_register(LUA, "SHIFT", bit_bshift_emulua);
 		lua_register(LUA, "BIT", bitbit);
 
-		lua_settop(LUA, 0); // clean the stack, because each call to luaL_register leaves a table on top
-
 		luabitop_validate(LUA);
+
+		lua_settop(LUA, 0); // clean the stack, because each call to luaL_register leaves a table on top
 
 		// push arrays for storing hook functions in
 		for(int i = 0; i < LUAMEMHOOK_COUNT; i++)
@@ -3761,7 +3758,10 @@ int DEGA_LoadLuaCode(const char *filename) {
 		return 0; // Oh shit.
 	}
 
-	
+#ifdef WIN32
+	AddRecentLuaFile(filename); //Add the filename to our recent lua menu
+#endif
+
 	// Get our function into it
 	lua_xmove(LUA, thread, 1);
 	
@@ -3809,7 +3809,7 @@ int DEGA_LoadLuaCode(const char *filename) {
  */
 void DEGA_ReloadLuaCode()
 {
-	if (!luaScriptName) {
+	if (!*luaScriptName) {
 		char msg[40] = "There's no script to reload.";
 		RunText(msg, 2*60);
 	}

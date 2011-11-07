@@ -1,9 +1,11 @@
 // Config file module
 #include "app.h"
 
-static char *Config="dega-s.ini";
+static const char *Config="dega-s.ini";
 
-static char *LabelCheck(char *s,char *Label)
+static char recent_lua_files[5][MAX_PATH];
+
+static char *LabelCheck(char *s,const char *Label)
 {
 #define SKIP_WS(s) for (;;) { if (*s!=' ' && *s!='\t') break;  s++; } // skip whitespace
   int Len;
@@ -84,6 +86,16 @@ int ConfLoad()
     STR(rw_recent_files[3]);
     STR(rw_recent_files[4]);
 
+    //Lua Scripting
+    STR(recent_lua_files[0]);
+    STR(recent_lua_files[1]);
+    STR(recent_lua_files[2]);
+    STR(recent_lua_files[3]);
+    STR(recent_lua_files[4]);
+    for (i = 0; i < 5; i++) {
+      if (strlen(recent_lua_files[4-i]) != 0) AddRecentLuaFile(recent_lua_files[4-i]);
+    }
+
 #undef STR
 #undef VAR
   }
@@ -154,6 +166,17 @@ int ConfSave()
     STR(rw_recent_files[2]);
     STR(rw_recent_files[3]);
     STR(rw_recent_files[4]);
+
+    //Lua Scripting
+    fprintf (h, "\n// Lua Scripting\n");
+    for (i = 0; i < 5; i++) {
+      if (recent_lua[i]) strncpy(recent_lua_files[i], recent_lua[i], MAX_PATH);
+    }
+    STR(recent_lua_files[0]);
+    STR(recent_lua_files[1]);
+    STR(recent_lua_files[2]);
+    STR(recent_lua_files[3]);
+    STR(recent_lua_files[4]);
 
 #undef STR
 #undef VAR

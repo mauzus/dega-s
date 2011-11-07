@@ -109,6 +109,8 @@
 #define ID_LUA_CLOSE_ALL                1337
 #define IDC_LUACONSOLE_CHOOSEFONT       1338
 #define IDC_LUACONSOLE_CLEAR            1339
+#define MENU_LUA_RECENT                 1340
+
 
 #define ID_FILE_LOADROM                 40001
 #define ID_FILE_RESET                   40002
