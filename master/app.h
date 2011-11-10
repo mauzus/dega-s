@@ -222,4 +222,6 @@ int ZipRead(unsigned char **pMem,int *pLen);
 #include "ramsearch.h"
 #include "ramwatch.h"
 
+extern CRITICAL_SECTION m_cs;
+
 #endif

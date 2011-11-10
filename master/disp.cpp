@@ -310,7 +310,9 @@ static int MemToSurf(IDirectDrawSurface *DestSurf)
     memcpy(pd,ps,DispMemPitch);
   }
 
+  EnterCriticalSection(&m_cs);
   DEGA_LuaGui(Surf,ScrnWidth,ScrnHeight,DispBpp,Pitch);
+  LeaveCriticalSection(&m_cs);
 
   Ret=DestSurf->Unlock(NULL);
 

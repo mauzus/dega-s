@@ -76,7 +76,9 @@ static int MediaInit(int Level)
     if (MastEx&MX_GG) { ScrnWidth=160; ScrnHeight=144; } // Game gear
     else              { ScrnWidth=256; ScrnHeight=192; } // Master System
 
+    EnterCriticalSection(&m_cs);
     CallRegisteredLuaFunctions(LUACALL_ONSTART);
+    LeaveCriticalSection(&m_cs);
   }
 
   if (Level<=30) // DirectDraw
@@ -123,7 +125,9 @@ static int MediaInit(int Level)
   if (Level<=58) // Load state
   {
     Update_RAM_Search();
+    EnterCriticalSection(&m_cs);
     DEGA_LuaFrameBoundary();
+    LeaveCriticalSection(&m_cs);
     DispDraw();
   }
 

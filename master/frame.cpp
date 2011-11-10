@@ -193,7 +193,9 @@ static LRESULT CALLBACK WindowProc(HWND hWnd,UINT Msg,WPARAM wParam,LPARAM lPara
 			char*& fname = recent_lua[wParam - LUA_FIRST_RECENT_FILE];
 			if(fname)
 			{
+				EnterCriticalSection(&m_cs);
 				DEGA_LoadLuaCode(fname);
+				LeaveCriticalSection(&m_cs);
 			}
 		}
 		if (Item==ID_LUA_OPEN) {

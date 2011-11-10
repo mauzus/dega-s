@@ -231,12 +231,16 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 			{
 				char filename[MAX_PATH];
 				GetDlgItemText(hDlg, IDC_EDIT_LUAPATH, filename, MAX_PATH);
+				EnterCriticalSection(&m_cs);
 				DEGA_LoadLuaCode(filename);
+				LeaveCriticalSection(&m_cs);
 			}	break;
 
 			case IDC_BUTTON_LUASTOP:
 			{
+				EnterCriticalSection(&m_cs);
 				DEGA_LuaStop();
+				LeaveCriticalSection(&m_cs);
 			}	break;
 
 			case IDC_BUTTON_LUAEDIT:
@@ -312,7 +316,9 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 		break;
 
 	case WM_CLOSE: {
+		EnterCriticalSection(&m_cs);
 		DEGA_LuaStop();
+		LeaveCriticalSection(&m_cs);
 		DragAcceptFiles(hDlg, FALSE);
 		if (hFont) {
 			DeleteObject(hFont);
@@ -333,7 +339,9 @@ INT_PTR CALLBACK DlgLuaScriptDialog(HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 			DragQueryFile(hDrop, 0, filename, MAX_PATH);
 		}
 		DragFinish(hDrop);
+		EnterCriticalSection(&m_cs);
 		DEGA_LoadLuaCode(filename);
+		LeaveCriticalSection(&m_cs);
 		return true;
 	}	break;
 
