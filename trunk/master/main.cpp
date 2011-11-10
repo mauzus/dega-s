@@ -39,7 +39,7 @@ extern "C" int dprintf (char *Format,...)
 int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE,LPSTR pCmdLine,INT)
 {
   char *CmdRom=NULL;
-  char *argv[] = { "dega", pCmdLine, 0 };
+  const char *argv[] = { "dega", pCmdLine, 0 };
   hAppInst=hInstance;
   InitCommonControls();
 

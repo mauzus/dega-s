@@ -74,7 +74,7 @@ void MimplFrame(int ReadInput)
 }
 
 // Display text for a period of time in the status bar
-int RunText(char *Text,int Len)
+int RunText(const char *Text,int Len)
 {
   RunPreChangeStatus();
   SetWindowText(hFrameStatus,Text);

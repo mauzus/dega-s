@@ -10,7 +10,7 @@ char *EmuTitle=NULL;
 static unsigned char *EmuRom=NULL;
 static int EmuRomLen=0;
 
-int PortMemicmp(char *s1, char *s2, size_t len) {
+int PortMemicmp(char *s1, const char *s2, size_t len) {
 	while (len > 0) {
 		int c1 = tolower(*s1), c2 = tolower(*s2);
 		if (c1 != c2) return c1-c2;

@@ -1,3 +1,6 @@
+#ifndef _APP_H
+#define _APP_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,8 +27,6 @@
 
 #include "../mast/mast.h"
 #include "resource.h"
-#include "luaengine.h"
-#include "luaconsole.h"
 
 typedef char s8;
 typedef short s16;
@@ -36,6 +37,9 @@ typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned long u32;
 typedef unsigned long long u64;
+
+#include "luaengine.h"
+#include "luaconsole.h"
 
 // Make the INLINE macro
 #undef INLINE
@@ -67,7 +71,7 @@ int LoopDo();
 // misc.cpp
 char *UnwrapString(char *Source,int StopAtSpace);
 char *GetFilename(char *Full);
-int AppError(char *Text,int bWarning);
+int AppError(const char *Text,int bWarning);
 int AppDirectory();
 char *GetStubName(char *Full);
 int GetClientScreenRect(HWND hWnd,RECT *pRect);
@@ -81,7 +85,7 @@ int SurfaceClear(IDirectDrawSurface *Surf,unsigned int Col);
 int RunFrame(int Draw,short *pSound);
 int RunStart();
 int RunStop();
-int RunText(char *Text,int Len);
+int RunText(const char *Text,int Len);
 #define STATUS_HIDE 0
 #define STATUS_AUTO 1
 #define STATUS_SHOW 2
@@ -92,7 +96,7 @@ int StatusHeight();
 // emu.cpp
 extern char EmuRomName[];
 extern char *EmuTitle;
-int PortMemicmp(char *s1, char *s2, size_t len);
+int PortMemicmp(char *s1, const char *s2, size_t len);
 int EmuInit();
 int EmuExit();
 int EmuLoad();
@@ -217,3 +221,5 @@ int ZipRead(unsigned char **pMem,int *pLen);
 
 #include "ramsearch.h"
 #include "ramwatch.h"
+
+#endif

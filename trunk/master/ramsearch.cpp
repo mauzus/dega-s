@@ -1099,12 +1099,12 @@ void CloseRamWindows() //Close the Ram Search & Watch windows when rom closes
 	ResetResults();
 	if (RamSearchHWnd)
 	{
-		SendMessage(RamSearchHWnd,WM_CLOSE,NULL,NULL);
+		SendMessage(RamSearchHWnd,WM_CLOSE,(WPARAM)NULL,(LPARAM)NULL);
 		RamSearchClosed = true;
 	}
 	if (RamWatchHWnd)
 	{
-		SendMessage(RamWatchHWnd,WM_CLOSE,NULL,NULL);
+		SendMessage(RamWatchHWnd,WM_CLOSE,(WPARAM)NULL,(LPARAM)NULL);
 		RamWatchClosed = true;
 	}
 }
@@ -1441,7 +1441,7 @@ LRESULT CALLBACK RamSearchProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 				r.left -= width2;
 			}
 
-			SetWindowPos(hDlg, NULL, r.left, r.top, NULL, NULL, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
+			SetWindowPos(hDlg, NULL, r.left, r.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
 			switch(rs_o)
 			{
 				case '<':

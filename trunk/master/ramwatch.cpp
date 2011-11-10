@@ -85,7 +85,7 @@ bool VerifyWatchNotAlreadyAdded(const AddressWatcher& watch)
 }
 
 
-bool InsertWatch(const AddressWatcher& Watch, char *Comment)
+bool InsertWatch(const AddressWatcher& Watch, const char *Comment)
 {
 	if(!VerifyWatchNotAlreadyAdded(Watch))
 		return false;
@@ -126,7 +126,7 @@ LRESULT CALLBACK PromptWatchNameProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
 			dy2 = (r2.bottom - r2.top) / 2;
 
 			//SetWindowPos(hDlg, NULL, max(0, r.left + (dx1 - dx2)), max(0, r.top + (dy1 - dy2)), NULL, NULL, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
-			SetWindowPos(hDlg, NULL, r.left, r.top, NULL, NULL, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
+			SetWindowPos(hDlg, NULL, r.left, r.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
 			strcpy(Str_Tmp,"Enter a name for this RAM address.");
 			SendDlgItemMessage(hDlg,IDC_PROMPT_TEXT,WM_SETTEXT,0,(LPARAM)Str_Tmp);
 			strcpy(Str_Tmp,"");
@@ -451,7 +451,7 @@ void OpenRWRecentFile(int memwRFileNumber)
 	return;
 }
 
-int Change_File_L(char *Dest, char *Dir, char *Titre, char *Filter, char *Ext, HWND hwnd)
+static int Change_File_L(char *Dest, char *Dir, const char *Titre, const char *Filter, const char *Ext, HWND hwnd)
 {
 	OPENFILENAME ofn;
 
@@ -482,7 +482,7 @@ int Change_File_L(char *Dest, char *Dir, char *Titre, char *Filter, char *Ext, H
 	return 0;
 }
 
-int Change_File_S(char *Dest, char *Dir, char *Titre, char *Filter, char *Ext, HWND hwnd)
+static int Change_File_S(char *Dest, char *Dir, const char *Titre, const char *Filter, const char *Ext, HWND hwnd)
 {
 	OPENFILENAME ofn;
 
@@ -547,7 +547,7 @@ bool Save_Watches()
 bool QuickSaveWatches()
 {
 if (RWfileChanged==false) return true; //If file has not changed, no need to save changes
-if (currentWatch[0] == NULL) //If there is no currently loaded file, run to Save as and then return
+if (currentWatch[0] == '\0') //If there is no currently loaded file, run to Save as and then return
 	{
 		return Save_Watches();
 	}
@@ -646,7 +646,7 @@ bool ResetWatches()
 		RefreshWatchListSelectedCountControlStatus(RamWatchHWnd);
 	}
 	RWfileChanged = false;
-	currentWatch[0] = NULL;
+	currentWatch[0] = '\0';
 	return true;
 }
 
@@ -696,7 +696,7 @@ LRESULT CALLBACK EditWatchProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 			dy2 = (r2.bottom - r2.top) / 2;
 
 			//SetWindowPos(hDlg, NULL, max(0, r.left + (dx1 - dx2)), max(0, r.top + (dy1 - dy2)), NULL, NULL, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
-			SetWindowPos(hDlg, NULL, r.left, r.top, NULL, NULL, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
+			SetWindowPos(hDlg, NULL, r.left, r.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
 			index = (int)lParam;
 			sprintf(Str_Tmp,"%04X",rswatches[index].Address);
 			SetDlgItemText(hDlg,IDC_EDIT_COMPAREADDRESS,Str_Tmp);
@@ -910,7 +910,7 @@ LRESULT CALLBACK RamWatchProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam
 					r.top = ramw_y;		  //This also ignores cases of windows -32000 error codes
 			}
 			//-------------------------------------------------------------------------------------
-			SetWindowPos(hDlg, NULL, r.left, r.top, NULL, NULL, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
+			SetWindowPos(hDlg, NULL, r.left, r.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
 			
 			ramwatchmenu=GetMenu(hDlg);
 			rwrecentmenu=CreateMenu();
