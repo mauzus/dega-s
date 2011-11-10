@@ -2,7 +2,7 @@
 #include "app.h"
 
 // Show a message box with an error message
-int AppError(char *Text,int bWarning)
+int AppError(const char *Text,int bWarning)
 {
   MessageBox(hFrameWnd,Text,
     bWarning ? APP_TITLE " Warning" :  APP_TITLE " Error",
@@ -139,15 +139,15 @@ int IntegerScale(RECT *pRect,int FitWidth,int FitHeight)
 char *AppName(unsigned int MastVer)
 {
   static char Name[64];
-  char *coreName;
   unsigned int MastVersion = MastVer & MAST_VERSION_MASK;
 
-  switch (MastVer & MAST_CORE_MASK)
-  {
-    case MAST_CORE_DOZE:  coreName = "Doze"; break;
-    case MAST_CORE_Z80JB: coreName = "MAME"; break;
-    default: coreName = "unknown";
-  }
+  const char *coreName = "MAME";
+//  switch (MastVer & MAST_CORE_MASK)
+//  {
+//    case MAST_CORE_DOZE:  coreName = "Doze"; break;
+//    case MAST_CORE_Z80JB: coreName = "MAME"; break;
+//    default: coreName = "unknown";
+//  }
 
 //  if (MastVersion&0xf) sprintf (Name,APP_TITLE " v%x.%.3x, %s core",MastVersion>>12,MastVersion&0xfff,coreName);
 //  else                 sprintf (Name,APP_TITLE " v%x.%.2x, %s core",MastVersion>>12,(MastVersion>>4)&0xff,coreName);
