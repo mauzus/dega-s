@@ -35,7 +35,7 @@ void MdrawCramChangeAll()
 // A change in CRam - update the color in Mdraw
 void MdrawCramChange(int a)
 {
-  static int i = 0;
+//  static int i = 0;
   int s,c;
   if (pMastb==NULL) return;
 

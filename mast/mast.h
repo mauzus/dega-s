@@ -125,7 +125,7 @@ void MvidPostLoadState(int readonly);
 void MvidPostSaveState();
 void MvidPostHardReset();
 int MvidSetAuthor(char *author);
-void MvidGetAuthor(char *author, int len);
+void MvidGetAuthor(char *author, unsigned int len);
 int MvidGetFrameCount();
 int MvidGetRerecordCount();
 int MvidGotProperties();

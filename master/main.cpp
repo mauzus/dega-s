@@ -41,7 +41,7 @@ extern "C" int dprintf (char *Format,...)
 int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE,LPSTR pCmdLine,INT)
 {
   char *CmdRom=NULL;
-  const char *argv[] = { "dega", pCmdLine, 0 };
+//  const char *argv[] = { "dega", pCmdLine, 0 };
   hAppInst=hInstance;
   InitCommonControls();
 
@@ -71,7 +71,9 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE,LPSTR pCmdLine,INT)
 
   ConfSave(); // Save config
   if (DebugFile!=NULL) fclose(DebugFile);  DebugFile=NULL; // Stop logging
-  
+
+  DeleteCriticalSection(&m_cs);
+
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF ); // Check for memory leaks
 #endif

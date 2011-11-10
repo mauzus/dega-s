@@ -141,16 +141,6 @@ char *AppName(unsigned int MastVer)
   static char Name[64];
   unsigned int MastVersion = MastVer & MAST_VERSION_MASK;
 
-  const char *coreName = "MAME";
-//  switch (MastVer & MAST_CORE_MASK)
-//  {
-//    case MAST_CORE_DOZE:  coreName = "Doze"; break;
-//    case MAST_CORE_Z80JB: coreName = "MAME"; break;
-//    default: coreName = "unknown";
-//  }
-
-//  if (MastVersion&0xf) sprintf (Name,APP_TITLE " v%x.%.3x, %s core",MastVersion>>12,MastVersion&0xfff,coreName);
-//  else                 sprintf (Name,APP_TITLE " v%x.%.2x, %s core",MastVersion>>12,(MastVersion>>4)&0xff,coreName);
   if (MastVersion&0xf) sprintf (Name,APP_TITLE " v%x.%.3x",MastVersion>>12,MastVersion&0xfff);
   else                 sprintf (Name,APP_TITLE " v%x.%.2x",MastVersion>>12,(MastVersion>>4)&0xff);
   return Name;

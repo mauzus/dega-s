@@ -187,7 +187,7 @@ static int FrameWithSound(int bDraw) { return RunFrame(bDraw,DSoundNextSound); }
 // The Run Thread
 static DWORD WINAPI RunThreadProc(void *pParam)
 {
-  MSG Msg; int Ret=0,WaitTime=4;
+  int Ret=0,WaitTime=4;
   (void)pParam;
   AttachThreadInput(RunId,MainId,1); // Attach to main thread (for Input/GetActiveWindow)
 

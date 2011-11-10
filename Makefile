@@ -11,6 +11,10 @@ ifndef PROFILE_GENERATE
 endif
 endif
 
+ifdef DEBUG_SYM
+	OPTFLAGS=-Wall
+endif
+
 CC=gcc
 #CC=icc
 CXX=g++
