@@ -238,7 +238,7 @@ int MvidSetAuthor(char *author) {
 	return 1;
 }
 
-void MvidGetAuthor(char *author, int len) {
+void MvidGetAuthor(char *author, unsigned int len) {
 	if (len > sizeof(currentMovie.videoAuthor)+1) len = sizeof(currentMovie.videoAuthor)+1;
 	strncpy(author, currentMovie.videoAuthor, len);
 	author[len-1] = 0;
@@ -283,7 +283,7 @@ void MvidPreFrame() {
 	frameCount++;
 
 	char zero = 0;
-	int i;
+	unsigned int i;
 
 	if (videoFile != NULL) {
 		switch (videoMode) {

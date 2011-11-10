@@ -843,7 +843,7 @@ static void CallRegisteredLuaMemHook_LuaMatch(unsigned int address, int size, un
 #endif
 				lua_settop(LUA, 0);
 				lua_getfield(LUA, LUA_REGISTRYINDEX, luaMemHookTypeStrings[hookType]);
-				for(int i = address; i != address+size; i++)
+				for(unsigned int i = address; i != address+size; i++)
 				{
 					lua_rawgeti(LUA, -1, i);
 					if (lua_isfunction(LUA, -1))
@@ -1133,7 +1133,7 @@ static int memory_getregister(lua_State *L)
 {
 	const char* qualifiedRegisterName = luaL_checkstring(L,1);
 	lua_settop(L,0);
-	for(int cpu = 0; cpu < sizeof(cpuToRegisterMaps)/sizeof(*cpuToRegisterMaps); cpu++)
+	for(unsigned int cpu = 0; cpu < sizeof(cpuToRegisterMaps)/sizeof(*cpuToRegisterMaps); cpu++)
 	{
 		cpuToRegisterMap ctrm = cpuToRegisterMaps[cpu];
 		int cpuNameLen = strlen(ctrm.cpuName);
@@ -1167,7 +1167,7 @@ static int memory_setregister(lua_State *L)
 	const char* qualifiedRegisterName = luaL_checkstring(L,1);
 	unsigned long value = (unsigned long)(luaL_checkinteger(L,2));
 	lua_settop(L,0);
-	for(int cpu = 0; cpu < sizeof(cpuToRegisterMaps)/sizeof(*cpuToRegisterMaps); cpu++)
+	for(unsigned int cpu = 0; cpu < sizeof(cpuToRegisterMaps)/sizeof(*cpuToRegisterMaps); cpu++)
 	{
 		cpuToRegisterMap ctrm = cpuToRegisterMaps[cpu];
 		int cpuNameLen = strlen(ctrm.cpuName);

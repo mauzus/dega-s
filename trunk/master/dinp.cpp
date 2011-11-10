@@ -42,7 +42,7 @@ End:
 static int SetUpJoystick(IDirectInputDevice2 *pJoy)
 {
   int Ret=0;
-  DIPROPRANGE diprg={0}; 
+  DIPROPRANGE diprg={{0}}; 
   if (pJoy==NULL) return 1;
 
   Ret=pJoy->SetDataFormat(&c_dfDIJoystick);
@@ -159,7 +159,7 @@ static int JoystickState(DIJOYSTATE *pState,int SubCode)
     return 0;
   }
   if (SubCode<0x10) return 0;
-  if (SubCode<0x10 + DINPUT_BUTTON_COUNT) 
+  if (SubCode<(int)(0x10 + DINPUT_BUTTON_COUNT))
   {
     // A joystick button
     return (pState->rgbButtons[SubCode-0x10]&0x80) ? 1 : 0;
@@ -207,7 +207,7 @@ int DirInputFind()
     if (ReadJoystick(i)!=0) continue; // There was an error polling the joystick
     pState=JoyState+i;
     for (j=1;j<5;j++) { if (JoystickState(pState,j)) { RetVal=0x4000|(i<<8)|j; goto End; } }
-    for (j=0x10;j<0x10+DINPUT_BUTTON_COUNT;j++)
+    for (j=0x10;j<(int)(0x10+DINPUT_BUTTON_COUNT);j++)
     { if (JoystickState(pState,j)) { RetVal=0x4000|(i<<8)|j; goto End; } }
   }
 End:

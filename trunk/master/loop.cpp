@@ -471,7 +471,7 @@ int LoopDo()
 
     Ret=MediaInit(InitLevel); if (Ret!=0) { InitLevel=0; goto Error; }
 
-MainLoop:
+//MainLoop:
     for (;;)
     {
       int Ret=0;

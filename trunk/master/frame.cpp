@@ -30,7 +30,7 @@ void UpdateLuaRMenu(HMENU menu, char **strs, unsigned int mitem, unsigned int ba
 	SetMenuItemInfo(hFrameMenu, mitem, FALSE, &moo);
 
 	// Remove all recent files submenus
-	for(x = 0; x < MAX_NUMBER_OF_LUA_RECENT_FILES; x++)
+	for(x = 0; x < (int)MAX_NUMBER_OF_LUA_RECENT_FILES; x++)
 	{
 		RemoveMenu(menu, baseid + x, MF_BYCOMMAND);
 	}
