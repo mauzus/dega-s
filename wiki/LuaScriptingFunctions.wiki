@@ -1,4 +1,5 @@
 #summary Dega S Lua Scripting Function List
+#labels Featured
 
 See also [http://www.lua.org/manual/5.1/ Lua manual].
 
