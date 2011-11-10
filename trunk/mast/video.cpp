@@ -21,6 +21,7 @@ int frameCount;
 #define HEADER_SIZE 0xF4
 #define SAVE_STATE_SIZE 41472
 
+extern CRITICAL_SECTION m_cs; // ../master/main.cpp
 int DEGA_LuaRerecordCountSkip(); // ../master/luaengine.cpp
 
 static int MastAcbVideoRead(struct MastArea *area) {
@@ -403,7 +404,9 @@ void MvidPostLoadState(int readonly) {
 			fclose(videoFile);
 			videoFile = fopen(videoFilename, "r+b");
 
+			EnterCriticalSection(&m_cs);
 			if(!DEGA_LuaRerecordCountSkip()) currentMovie.rerecordCount++;
+			LeaveCriticalSection(&m_cs);
 
 			if (embInfo.isOldType != 0) {
 				currentMovie.vidFrameCount = frameCount;

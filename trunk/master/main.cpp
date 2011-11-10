@@ -26,6 +26,8 @@ int Fullscreen=0;
 HACCEL hAccel=NULL; // Key accelerators
 int StartInFullscreen=0;
 
+CRITICAL_SECTION m_cs;
+
 static FILE *DebugFile=NULL;
 // Debug printf to a file
 extern "C" int dprintf (char *Format,...)
@@ -61,6 +63,8 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE,LPSTR pCmdLine,INT)
   }
 
   if (StartInFullscreen) Fullscreen=1;
+
+  InitializeCriticalSection(&m_cs);
 
   // Main loop
   LoopDo();

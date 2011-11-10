@@ -36,12 +36,17 @@ void RunPostChangeStatus()
 int RunFrame(int Draw,short *pSound)
 {
   if (!NoInput) InputGet();
-	if(DEGA_LuaUsingJoypad(0)) MastInput[0] = DEGA_LuaReadJoypad(0);
-	if(DEGA_LuaUsingJoypad(1)) MastInput[1] = DEGA_LuaReadJoypad(1);
+
+  EnterCriticalSection(&m_cs);
+  if(DEGA_LuaUsingJoypad(0)) MastInput[0] = DEGA_LuaReadJoypad(0);
+  if(DEGA_LuaUsingJoypad(1)) MastInput[1] = DEGA_LuaReadJoypad(1);
+  LeaveCriticalSection(&m_cs);
 
   pMsndOut=pSound;
 
+  EnterCriticalSection(&m_cs);
   CallRegisteredLuaFunctions(LUACALL_BEFOREEMULATION); //TODO: find proper place
+  LeaveCriticalSection(&m_cs);
 
   // Run frame
   EmuFrame();
@@ -58,8 +63,11 @@ int RunFrame(int Draw,short *pSound)
   RunPostChangeStatus();
 
   Update_RAM_Search();
+
+  EnterCriticalSection(&m_cs);
   DEGA_LuaFrameBoundary();
   CallRegisteredLuaFunctions(LUACALL_AFTEREMULATION); //TODO: find proper place
+  LeaveCriticalSection(&m_cs);
 
   if (Draw) DispDraw();
 

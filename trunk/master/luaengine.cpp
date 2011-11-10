@@ -886,8 +886,11 @@ void CallRegisteredLuaMemHook(unsigned int address, int size, unsigned int value
 	{
 		//if((hookType <= LUAMEMHOOK_EXEC) && (address >= 0xE00000))
 		//      address |= 0xFF0000; // account for mirroring of RAM
-		if(hookedRegions[hookType].Contains(address, size))
+		if(hookedRegions[hookType].Contains(address, size)) {
+			EnterCriticalSection(&m_cs);
 			CallRegisteredLuaMemHook_LuaMatch(address, size, value, hookType); // something has hooked this specific address
+			LeaveCriticalSection(&m_cs);
+		}
 	}
 }
 
